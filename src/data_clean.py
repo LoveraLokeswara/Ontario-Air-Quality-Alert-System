@@ -44,6 +44,16 @@ def prep_and_merge(aq_filepath, weather_filepath):
     merged_df = pd.merge(aq_clean, weather_df, on='Datetime', how='inner')
     merged_df = merged_df.sort_values('Datetime').reset_index(drop=True)
     
+    # Interpolate PM2.5 for short gaps
+    merged_df['PM_ppb'] = merged_df['PM_ppb'].ffill()
+
+    # Forward fill weather conditions (categorical)
+    merged_df['Weather'] = merged_df['Weather'].ffill()
+
+    # Forward fill remaining weather numerical columns
+    numerical_weather_cols = ['Temp (°C)', 'Rel Hum (%)', 'Wind Spd (km/h)', 'Stn Press (kPa)']
+    merged_df[numerical_weather_cols] = merged_df[numerical_weather_cols].ffill()
+    
     print(f"Successfully merged! Output contains {len(merged_df)} rows.")
     return merged_df
 
