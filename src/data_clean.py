@@ -20,7 +20,7 @@ def prep_and_merge(aq_filepath, weather_filepath):
     )
     
     # Clean the PM values (Fixed KeyReference here)
-    aq_long['PM_ppb'] = pd.to_numeric(aq_long['PM_ppb'].replace(9999, np.nan), errors='coerce')
+    aq_long['PM_ppb'] = pd.to_numeric(aq_long['PM_ppb'].replace([9999, 999, -999], np.nan), errors='coerce')
     aq_long['Hour_Int'] = aq_long['Hour_Col'].str.replace('H', '').astype(int) - 1
     
     # 1. Convert Date column to Datetime, forcing footer text to become 'NaT'
