@@ -1,0 +1,423 @@
+---
+title: "Case Study 2: Technical Presentation"
+subtitle: "STAT 946 – Case Studies in Data Science"
+author:
+  - "Dario Greco"
+  - "Lovera Lokeswara"
+  - "Sanika Poojary"
+  - "Sophia Feng"
+date: "March 9, 2026"
+format:
+  beamer:
+    theme: Madrid
+    colortheme: dolphin
+    aspectratio: 169
+    fontsize: 10pt
+    incremental: true
+    number-sections: false
+    pdf-engine: pdflatex
+execute:
+  echo: false
+  warning: false
+  message: false
+header-includes:
+  - \usepackage{amsmath,amssymb}
+  - \usepackage{booktabs}
+  - \usepackage{siunitx}
+  - \newcommand{\E}{\mathbb{E}}
+  - \newcommand{\Var}{\mathrm{Var}}
+---
+
+# Presentation Goals
+
+## Objective of This Presentation
+
+We aim to demonstrate that:
+
+- The analysis is scientifically justified
+- The modeling pipeline is technically reproducible
+- Assumptions and uncertainty are explicitly understood
+- Computational decisions are justified
+- The approach meaningfully extends Case Study 1
+
+---
+
+# Problem Context
+
+## Scientific Objective
+
+Goal:
+
+Predict future air pollution concentration
+
+$$
+y_{t+h,s}
+$$
+
+using historical pollution and meteorological drivers.
+
+Where:
+
+- $t$: time index  
+- $h$: forecast horizon  
+- $s$: monitoring location  
+
+Output:
+
+$$
+p(y_{t+h,s} \mid \mathcal{D}_{\le t})
+$$
+
+predictive distribution rather than point estimate.
+
+---
+
+## Data Structure
+
+Dataset characteristics:
+
+- Temporal resolution: hourly observations
+- Multiple monitoring stations
+- Strong seasonality
+- Missing observations
+- Extreme pollution events
+
+Challenges:
+
+- Temporal dependence
+- Nonlinearity
+- Distributional skewness
+- Covariate interaction effects
+
+---
+
+# Case Study 1 Baseline
+
+## Previous Approach
+
+Baseline model:
+
+- Describe CS1 model briefly here
+
+Strengths:
+- Fast
+- Interpretable
+- Stable training
+
+Limitations:
+
+- Limited nonlinear modeling
+- Weak long-term dependency capture
+- Poor extreme-event prediction
+- Limited uncertainty characterization
+
+---
+
+# Motivation for Case Study 2
+
+## Why a More Advanced Method?
+
+Key limitation addressed:
+
+Traditional models assume simplified temporal relationships.
+
+Air quality dynamics exhibit:
+
+- long memory
+- nonlinear interactions
+- regime changes
+
+Therefore we introduce a computationally intensive model capable of learning complex temporal structure.
+
+---
+
+# Methodology
+
+## Model Overview
+
+We model forecasts using
+
+$$
+\hat{y}_{t+h,s}
+=
+f_\theta(
+x_{\le t,s},
+y_{\le t,s}
+)
+$$
+
+where:
+
+- $f_\theta$ is a deep sequence model
+- parameters learned via gradient optimization
+
+(Replace with LSTM / TCN / TFT description)
+
+---
+
+## Statistical Assumptions
+
+Assumptions include:
+
+- Conditional dependence on past observations
+- Stationarity within training window
+- Covariates available at forecast time
+- Measurement noise treated as stochastic error
+
+Limitations arise if these assumptions fail.
+
+---
+
+## Uncertainty Modeling
+
+Predictive uncertainty estimated via:
+
+- quantile regression / probabilistic output / ensemble
+
+Example:
+
+$$
+P(y_{t+h} \le q_\tau) = \tau
+$$
+
+Produces calibrated prediction intervals.
+
+---
+
+# Computational Implementation
+
+## Training Procedure
+
+Optimization:
+
+- Loss function: specify here
+- Optimizer: Adam
+- Learning rate scheduling
+- Early stopping
+
+Training setup:
+
+- GPU computation (Google Colab)
+- Batch training
+- Multiple epochs
+
+Runtime considerations:
+
+- Training time
+- Memory constraints
+- Model scalability
+
+---
+
+# Validation Strategy
+
+## Leakage-Free Design
+
+Time-respecting split:
+
+- Training period
+- Validation period
+- Test period
+
+No future information used during training.
+
+Forecast evaluated strictly forward in time.
+
+---
+
+## Hyperparameter Tuning
+
+Tuned parameters:
+
+- learning rate
+- sequence length
+- hidden dimension
+- dropout rate
+
+Search strategy:
+
+- random or grid search
+
+Validation set only used for tuning.
+
+---
+
+# Evaluation Metrics
+
+## Point Forecast Accuracy
+
+Metrics:
+
+- RMSE
+- MAE
+
+$$
+RMSE =
+\sqrt{
+\frac{1}{n}
+\sum (y_i-\hat y_i)^2
+}
+$$
+
+---
+
+## Uncertainty Evaluation
+
+We evaluate:
+
+- Prediction interval coverage
+- Interval sharpness
+- Calibration reliability
+
+Goal:
+
+High coverage with minimal interval width.
+
+---
+
+# Results
+
+## Performance Comparison
+
+Compare against Case Study 1:
+
+- accuracy improvement
+- robustness during extreme events
+- horizon stability
+
+Insert results table or figure.
+
+---
+
+## Diagnostic Analysis
+
+Diagnostics performed:
+
+- residual analysis
+- temporal error trends
+- seasonal performance comparison
+
+Observed failure modes:
+
+- peak underestimation
+- regime transition difficulty
+
+---
+
+# Technical Value Added
+
+## Improvements Over Case Study 1
+
+New capabilities:
+
+- nonlinear temporal learning
+- probabilistic forecasting
+- improved extreme-event prediction
+
+Trade-offs introduced:
+
+- higher runtime
+- reduced interpretability
+- increased compute requirements
+
+---
+
+# Limitations
+
+## Statistical Risks
+
+Potential risks:
+
+- overfitting
+- covariate shift
+- sensor bias
+- model instability under unseen regimes
+
+These define future research directions.
+
+---
+
+# Reproducibility
+
+## Repository Structure
+
+Reproduction steps:
+
+1. Install dependencies
+2. Load processed dataset
+3. Run training notebook
+4. Execute evaluation pipeline
+
+Artifacts stored:
+
+- trained weights
+- prediction outputs
+- evaluation metrics
+
+---
+
+## Computational Reproduction
+
+Execution platform:
+
+- Google Colab GPU
+
+Approximate runtime:
+
+- preprocessing
+- training
+- evaluation
+
+Random seeds fixed where possible.
+
+---
+
+# Key Takeaways
+
+## Summary
+
+- Advanced model improves forecasting performance
+- Uncertainty estimates are quantitatively validated
+- Method addresses limitations from Case Study 1
+- Computational cost justified by predictive gain
+
+---
+
+# Questions
+
+## Q&A
+
+We welcome discussion on:
+
+- assumptions
+- validation design
+- uncertainty interpretation
+- scalability
+
+---
+
+# Appendix
+
+## Additional Model Details
+
+Include:
+
+- architecture diagram
+- hyperparameters
+- ablation studies
+
+---
+
+## Additional Diagnostics
+
+- calibration curves
+- residual plots
+- site-level performance
+
+---
+
+## Reproducibility Notes
+
+Large artifacts stored externally if required.
+
+Instructions documented in repository README.
