@@ -30,14 +30,11 @@ print(f"Running on: {device}", flush=True)
 RESULTS_DIR = "results"
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
+# 1. UPDATED DATASET CLASS: Accepts pre-scaled data to prevent leakage
 class PatchAQDataset(Dataset):
-    def __init__(self, csv_path, seq_length, forecast_horizon=6):
-        df = pd.read_csv(csv_path, low_memory=False)
-        # Updated feature set (6 variables)
-        self.features = ['PM_ppb', 'Temp (°C)', 'Rel Hum (%)', 'Wind Spd (km/h)', 'Stn Press (kPa)', 'Dew Point Temp (°C)']
-        data = df[self.features].values
-        self.scaler = StandardScaler()
-        self.data = self.scaler.fit_transform(data)
+    def __init__(self, scaled_data, scaler, seq_length, forecast_horizon=6):
+        self.data = scaled_data
+        self.scaler = scaler
         self.seq_length = seq_length
         self.forecast_horizon = forecast_horizon
 
@@ -59,7 +56,7 @@ def train_and_evaluate(d_model, dropout, patch_len, lookback, heads, lr, stride,
     test_loader = DataLoader(Subset(dataset, range(val_idx, n)), batch_size=128)
 
     config = PatchTSTConfig(
-        num_input_channels=6, # Updated to 6
+        num_input_channels=6,
         context_length=lookback, 
         prediction_length=6,
         patch_length=patch_len, 
@@ -73,9 +70,11 @@ def train_and_evaluate(d_model, dropout, patch_len, lookback, heads, lr, stride,
     
     model = PatchTSTForPrediction(config).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    criterion = nn.MSELoss()
+    
+    # 2. UPDATED LOSS FUNCTION: Changed to L1Loss (MAE) to fix lag
+    criterion = nn.L1Loss()
 
-    best_val_loss, patience, counter = float('inf'), 8, 0 # Lowered patience for efficiency
+    best_val_loss, patience, counter = float('inf'), 8, 0
     for epoch in range(40):
         model.train()
         for x, y in train_loader:
@@ -118,63 +117,74 @@ def train_and_evaluate(d_model, dropout, patch_len, lookback, heads, lr, stride,
 if __name__ == "__main__":
     data_path = "data/data_clean/cleaned_data_toronto_downtown.csv"
     
+    # 3. SCALING FIX: Fit only on the first 70% of the raw dataframe
+    df = pd.read_csv(data_path, low_memory=False)
+    features = ['PM_ppb', 'Temp (°C)', 'Rel Hum (%)', 'Wind Spd (km/h)', 'Stn Press (kPa)', 'Dew Point Temp (°C)']
+    
+    train_size = int(len(df) * 0.7)
+    scaler = StandardScaler()
+    scaler.fit(df.iloc[:train_size][features])
+    
+    # Transform the entire array using only the training distribution
+    scaled_data_array = scaler.transform(df[features].values)
+
     results = []
     
-    # Variables for tracking the best model silently
     best_mae = float('inf')
     best_p = None
     best_a = None
     best_config_str = ""
     best_ds = None
 
-    # --- EXPANDED SEARCH GRID ---
-    lookbacks = [24, 72, 156, 254]
-    d_models = [128, 256] # Increased capacity for 6 features
+    # --- UPDATED SEARCH GRID ---
+    lookbacks = [24,48,72]
+    d_models = [128, 256] 
     heads_list = [8]
-    learning_rates = [0.001, 0.0005]
-    patch_lengths = [8, 16, 24] 
+    learning_rates = [0.001, 0.0005, 0.002]
+    patch_lengths = [4, 6, 8] 
 
-    print("--- STARTING HEAVY-FEATURE MULTI-YEAR LONG SWEEP ---", flush=True)
+    print("--- STARTING HIGH-RESOLUTION SWEEP ---", flush=True)
 
     for lb in lookbacks:
-        ds = PatchAQDataset(data_path, seq_length=lb)
+        # Pass the pre-scaled array and the scaler to the dataset
+        ds = PatchAQDataset(scaled_data_array, scaler, seq_length=lb)
+        
         for dm in d_models:
             for nh in heads_list:
                 for lr in learning_rates:
                     for pl in patch_lengths:
-                        if pl >= lb: continue
                         
-                        # Test a smaller, higher-overlap stride
-                        stride = 4 if pl == 8 else 8
+                        # Dynamic 50% overlap stride
+                        stride = pl // 2 
                         
-                        print(f"Testing: LB={lb}, DM={dm}, Heads={nh}, LR={lr}, Patch={pl}", flush=True)
+                        print(f"Testing: LB={lb}, DM={dm}, Heads={nh}, LR={lr}, Patch={pl}, Stride={stride}", flush=True)
                         start_time = time.time()
                         try:
                             mae, rmse, p, a = train_and_evaluate(dm, 0.1, pl, lb, nh, lr, stride, ds, device)
                             
-                            # Silently track the best model
                             if mae < best_mae:
                                 best_mae = mae
                                 best_p = p
                                 best_a = a
                                 best_ds = ds
-                                best_config_str = f"LB={lb}, DM={dm}, Heads={nh}, LR={lr}, Patch={pl}"
-                                os.replace("temp_best_v4.pt", os.path.join(RESULTS_DIR, "global_champion_v4.pt"))
+                                best_config_str = f"LB={lb}, DM={dm}, Heads={nh}, LR={lr}, Patch={pl}, Stride={stride}"
+                                os.replace("temp_best_v4.pt", os.path.join(RESULTS_DIR, "global_champion_v5.pt"))
 
                             results.append({
                                 "lookback": lb, "d_model": dm, "heads": nh, 
-                                "lr": lr, "patch_len": pl, "mae": mae, "rmse": rmse
+                                "lr": lr, "patch_len": pl, "stride": stride, 
+                                "mae": mae, "rmse": rmse
                             })
                             print(f"MAE: {mae:.4f} | RMSE: {rmse:.4f} | {time.time()-start_time:.1f}s", flush=True)
                         except Exception as e:
                             print(f"Trial failed: {e}", flush=True)
 
-    df = pd.DataFrame(results)
-    df.to_csv(os.path.join(RESULTS_DIR, "v4_heavy_sweep_results.csv"), index=False)
+    df_results = pd.DataFrame(results)
+    df_results.to_csv(os.path.join(RESULTS_DIR, "v5_antilag_sweep_results.csv"), index=False)
     print("\nSweep Complete. Top 5 by MAE:")
-    print(df.sort_values("mae").head(5))
+    print(df_results.sort_values("mae").head(5))
 
-    # Plot the first 100 hours of the best model
+    # 4. PLOT UPDATE: Expanded to 500 hours
     if best_p is not None:
         pm_mean = best_ds.scaler.mean_[0]
         pm_std = best_ds.scaler.scale_[0]
@@ -182,14 +192,16 @@ if __name__ == "__main__":
         unscaled_preds = (best_p * pm_std) + pm_mean
         unscaled_actuals = (best_a * pm_std) + pm_mean
         
-        plt.figure(figsize=(12, 6))
-        plt.plot(unscaled_actuals[:100], label="Actual PM2.5 (ppb)", color='blue', alpha=0.7)
-        plt.plot(unscaled_preds[:100], label="Predicted PM2.5 (ppb)", color='red', linestyle='--')
+        plt.figure(figsize=(16, 6))
+        # Sliced to 500 instead of 100
+        plt.plot(unscaled_actuals[:500], label="Actual PM2.5 (ppb)", color='blue', alpha=0.7)
+        plt.plot(unscaled_preds[:500], label="Predicted PM2.5 (ppb)", color='red', linestyle='--')
         plt.title(f"Toronto Downtown PM2.5 Forecast (6-Hour Lead Time)\nBest Config: {best_config_str}")
         plt.xlabel("Time Steps (Hours)")
         plt.ylabel("Concentration (ppb)")
         plt.legend()
         plt.grid(True)
         
-        plot_path = os.path.join(RESULTS_DIR, "best_pm25_100hr_forecast.png")
+        # Saved under a new name to avoid overwriting your old one
+        plot_path = os.path.join(RESULTS_DIR, "best_pm25_500hr_forecast.png")
         plt.savefig(plot_path)
