@@ -13,7 +13,7 @@ STATIONS = {
 }
 
 # Set your "couple of years" range here
-START_YEAR = 2018
+START_YEAR = 2019
 END_YEAR = 2025
 
 def get_hourly_station_data(station_id, station_name, start_year, end_year):

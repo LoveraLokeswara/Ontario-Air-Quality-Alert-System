@@ -37,7 +37,7 @@ def collect_air_quality():
         url = (
             f"https://www.airqualityontario.com/history/searchResults.php?page=CSV"
             f"&s_categoryId=Academic&s_stationId={sid}&s_pollutantId={POLLUTANT_ID}"
-            f"&s_startDate=2018-01-01&s_endDate=2025-12-31&s_reportType=CSV"
+            f"&s_startDate=2019-06-22&s_endDate=2025-12-31&s_reportType=CSV"
         )
         
         file_path = os.path.join(OUTPUT_FOLDER, f"station_{sid}_data.csv")
