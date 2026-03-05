@@ -64,7 +64,7 @@ def prep_and_merge(aq_filepath, weather_filepath):
     merged_df['Weather'] = merged_df['Weather'].ffill()
 
     # Forward fill remaining weather numerical columns
-    numerical_weather_cols = ['Temp (°C)', 'Rel Hum (%)', 'Wind Spd (km/h)', 'Stn Press (kPa)', 'Dew Point Temp (°C)']
+    numerical_weather_cols = ['Temp (°C)', 'Rel Hum (%)', 'Wind Spd (km/h)', 'Stn Press (kPa)', 'Dew Point Temp (°C)', 'Precip. Amount (mm)']
     merged_df[numerical_weather_cols] = merged_df[numerical_weather_cols].ffill()
     
     print(f"Successfully merged! Output contains {len(merged_df)} rows.")
