@@ -51,6 +51,16 @@ def prep_and_merge(aq_filepath, weather_filepath):
     merged_df['PM_ppb'] = merged_df['PM_ppb'].ffill(limit=4)
     merged_df = merged_df.dropna(subset=['PM_ppb'])
     
+    # --- NEW: Cyclical Time Features ---
+    # This gives the models a "clock" to understand diurnal patterns, preventing 24h flatlining
+    merged_df['hour'] = merged_df['Datetime'].dt.hour
+    merged_df['month'] = merged_df['Datetime'].dt.month
+
+    merged_df['hour_sin'] = np.sin(2 * np.pi * merged_df['hour'] / 24.0)
+    merged_df['hour_cos'] = np.cos(2 * np.pi * merged_df['hour'] / 24.0)
+    merged_df['month_sin'] = np.sin(2 * np.pi * merged_df['month'] / 12.0)
+    merged_df['month_cos'] = np.cos(2 * np.pi * merged_df['month'] / 12.0)
+    
     # Calculate and print the dropped rows
     dropped_rows = initial_rows - len(merged_df)
     print(f"\n--- GAP FILTERING DIAGNOSTICS ---")
