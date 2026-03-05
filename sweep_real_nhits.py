@@ -6,6 +6,8 @@ import numpy as np
 import time
 import os
 import random
+import shutil
+import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, Dataset, Subset
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
@@ -66,8 +68,6 @@ class NHITSBlock(nn.Module):
         forecast = F.interpolate(theta_f, size=self.max_horizon, mode='linear', align_corners=True).squeeze(1)
 
         return backcast, forecast
-
-
 
 class RealNHITS(nn.Module):
     def __init__(self, input_dim, seq_len, hidden_dim=256, dropout_rate=0.1):
@@ -175,33 +175,73 @@ def run_trial(lb, lr, hd, drop, data, device):
 
 if __name__ == "__main__":
     print("Loading data for Scratch N-HiTS...", flush=True)
-    df = pd.read_csv("data/data_clean/cleaned_data_toronto_downtown.csv")
+    df = pd.read_csv("data/data_clean/cleaned_data_toronto_downtown.csv", low_memory=False)
     feats = ['PM_ppb', 'Temp (°C)', 'Rel Hum (%)', 'Wind Spd (km/h)', 'Stn Press (kPa)', 'Dew Point Temp (°C)', 'Precip. Amount (mm)', 'hour_sin', 'hour_cos', 'month_sin', 'month_cos']
-    
+
+
+    train_size = int(len(df) * 0.7)
+    # Fit the scaler ONLY on the training data
     scaler = StandardScaler()
-    scaled_data = scaler.fit_transform(df[feats])
+    scaler.fit(df.iloc[:train_size][feats])
+    scaled_data = scaler.transform(df[feats])
+    
     pm_mean, pm_std = scaler.mean_[0], scaler.scale_[0]
 
-    # Small focused grid based on your previous champion
-    grid = [
-        {'lb': 20, 'hd': 256, 'lr': 0.0001, 'dr': 0.1},
-        {'lb': 24, 'hd': 512, 'lr': 0.0001, 'dr': 0.1}
-    ]
+    # --- EXPANDED GRID ---
+    lookbacks = [20, 24, 48]
+    hidden_dims = [256, 512]
+    learning_rates = [0.001, 0.0005, 0.0001, 0.00005, 0.000001] 
+    dropouts = [0.1]
 
-    print("--- STARTING REFINED N-HITS SCRATCH SWEEP ---", flush=True)
+    print("--- STARTING EXPANDED N-HITS SCRATCH SWEEP ---", flush=True)
     results = []
+    
+    # Trackers for the overall champion model
+    best_rmse = float('inf')
+    best_p, best_a, best_cfg = None, None, None
 
-    for c in grid:
-        start = time.time()
-        p_raw, a_raw = run_trial(c['lb'], c['lr'], c['hd'], c['dr'], scaled_data, device)
-        
-        p = (p_raw * pm_std) + pm_mean
-        a = (a_raw * pm_std) + pm_mean
-        
-        rmse = np.sqrt(mean_squared_error(a, p))
-        mae = mean_absolute_error(a, p)
-        
-        print(f"Lookback: {c['lb']} | Hidden: {c['hd']} | RMSE: {rmse:.4f} | Time: {time.time()-start:.1f}s", flush=True)
-        results.append({**c, 'rmse': rmse, 'mae': mae})
+    for lb in lookbacks:
+        for hd in hidden_dims:
+            for lr in learning_rates:
+                for dr in dropouts:
+                    start = time.time()
+                    try:
+                        p_raw, a_raw = run_trial(lb, lr, hd, dr, scaled_data, device)
+                        
+                        p = (p_raw * pm_std) + pm_mean
+                        a = (a_raw * pm_std) + pm_mean
+                        
+                        rmse = np.sqrt(mean_squared_error(a, p))
+                        mae = mean_absolute_error(a, p)
+                        
+                        print(f"LB: {lb} | HD: {hd} | LR: {lr} | RMSE: {rmse:.4f} | {time.time()-start:.1f}s", flush=True)
+                        results.append({'lb': lb, 'hd': hd, 'lr': lr, 'dr': dr, 'rmse': rmse, 'mae': mae})
+                        
+                        # Save the global champion for local plotting later
+                        if rmse < best_rmse:
+                            best_rmse = rmse
+                            best_p, best_a, best_cfg = p, a, {'lb': lb, 'hd': hd}
+                            shutil.copy("best_scratch_weights.pt", "global_champion_nhits.pt")
+                            
+                    except Exception as e:
+                        print(f"Trial failed: {e}")
 
-    pd.DataFrame(results).to_csv("results_scratch_nhits.csv", index=False)
+    df_res = pd.DataFrame(results)
+    df_res.to_csv("results_scratch_nhits_expanded.csv", index=False)
+    print("\nSweep Complete. Top 3 by RMSE:")
+    print(df_res.sort_values("rmse").head(3))
+
+    # --- PLOT THE BEST MODEL ---
+    if best_p is not None:
+        print("\nGenerating Test Set Plot...", flush=True)
+        plt.figure(figsize=(15, 6))
+        plt.plot(best_a[:500], label="Actual PM2.5 (ppb)", color='blue', alpha=0.7)
+        plt.plot(best_p[:500], label="N-HiTS Predicted", color='red', linestyle='--')
+        plt.title(f"Toronto PM2.5 Test Set (4hr Horizon)\nChampion N-HiTS: {best_cfg['lb']}h Lookback, {best_cfg['hd']} Hidden | RMSE: {best_rmse:.4f}")
+        plt.xlabel("Hours")
+        plt.ylabel("PM2.5 Concentration")
+        plt.legend()
+        plt.grid(True)
+        plt.savefig("best_nhits_test_plot.png")
+        print("Saved plot as: best_nhits_test_plot.png")
+        print("Global champion weights saved as: global_champion_nhits.pt")
