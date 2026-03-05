@@ -33,13 +33,13 @@ header-includes:
 ## Background, stakeholders, operational value
 
 Organization: Toronto Transit Commission (TTC)  
-Primary stakeholder: Director of Station Operations and Maintenance :contentReference[oaicite:0]{index=0}
+Primary stakeholder: Director of Station Operations and Maintenance
 
 Operational context:
 
 - Subway stations rely on HVAC systems that draw outside air
-- During outdoor $PM_{2.5}$ spikes, filters degrade faster and indoor air quality risk increases :contentReference[oaicite:1]{index=1}
-- Forecasts enable proactive station ventilation actions (pre-ventilate, reduce intake during spikes, recirculation) :contentReference[oaicite:2]{index=2}
+- During outdoor $PM_{2.5}$ spikes, filters degrade faster and indoor air quality risk increases
+- Forecasts enable proactive station ventilation actions (pre-ventilate, reduce intake during spikes, recirculation)
 
 ---
 
@@ -47,11 +47,11 @@ Operational context:
 
 Primary:
 
-How accurately can hourly $PM_{2.5}$ in Ontario be forecasted at short horizons ($h \in \{4,6,24\}$ hours) using meteorological and environmental data? :contentReference[oaicite:3]{index=3}
+How accurately can hourly $PM_{2.5}$ in Ontario be forecasted at short horizon ($h = 4$ hours) using meteorological and environmental data? 
 
 Secondary:
 
-How much historical context is needed for optimal performance (for example 6, 12, 24, 72 hours of past observations)? :contentReference[oaicite:4]{index=4}
+How much historical context is needed for optimal performance (for example 6, 12, 24, 72 hours of past observations)? 
 
 ---
 
@@ -67,16 +67,14 @@ How much historical context is needed for optimal performance (for example 6, 12
 8. Model inference and operational interpretation
 9. Closing and next steps
 
----
-
 # Addressing Case Study 1 limitations
 
 ## What Case Study 1 could not do
 
 Limitations identified:
 
-- Traffic data only available daily, forcing hourly $PM_{2.5}$ to be averaged into daily values, losing spike timing :contentReference[oaicite:5]{index=5}
-- Traffic impact was weak; weather and seasonality were the true drivers :contentReference[oaicite:6]{index=6}
+- Traffic data only available daily, forcing hourly $PM_{2.5}$ to be averaged into daily values, losing spike timing
+- Traffic impact was weak. Weather and seasonality were the true drivers
 
 ---
 
@@ -84,8 +82,8 @@ Limitations identified:
 
 Key changes:
 
-- Remove unhelpful traffic signal, focus entirely on weather drivers :contentReference[oaicite:7]{index=7}
-- Use hourly weather to predict hourly $PM_{2.5}$ to capture spike timing and improve operational usefulness :contentReference[oaicite:8]{index=8}
+- Remove unhelpful traffic signal, focus entirely on weather drivers 
+- Use hourly weather to predict hourly $PM_{2.5}$ to capture spike timing and improve operational usefulness 
 
 Modeling target:
 
@@ -95,19 +93,17 @@ $$
 
 for $h \in \{4,6,24\}$ hours and site $s$.
 
----
-
 # Data and preprocessing
 
 ## Data sources and alignment plan
 
-Air quality: hourly pollutant concentrations by station and hour :contentReference[oaicite:9]{index=9}  
-Weather: hourly meteorology (temperature, humidity, wind speed/direction, precipitation) :contentReference[oaicite:10]{index=10}
+Air quality: hourly pollutant concentrations by station and hour 
+Weather: hourly meteorology (temperature, humidity, wind speed/direction, precipitation) 
 
 Alignment:
 
 - Join by timestamp (date-hour) at a Toronto monitoring station
-- Ensure overlapping time periods (2020 onward noted in proposal) :contentReference[oaicite:11]{index=11}
+- Ensure overlapping time periods (2020 onward noted in proposal) 
 
 ---
 
@@ -152,8 +148,6 @@ where $L$ is historical context length and $h \in \{4,6,24\}$.
 Output:
 
 - one dataset per horizon, or multi-horizon formulation (state which you used)
-
----
 
 # Simple models
 
@@ -218,8 +212,6 @@ Report:
 - best $\lambda$ per horizon
 - best history window per horizon (if tuned)
 
----
-
 # Complex model: N-HiTS
 
 ## Why N-HiTS
@@ -278,8 +270,6 @@ Selection criterion:
 - validation RMSE for each horizon
 - select best model per horizon (or one model overall, state which)
 
----
-
 # Comparison and evaluation
 
 ## Metrics
@@ -333,8 +323,6 @@ Failure modes to name explicitly:
 - lag in reacting to abrupt changes
 - sensitivity to missingness or covariate shift
 
----
-
 # Model inference and operational use
 
 ## Inference outputs we deliver
@@ -358,7 +346,7 @@ Actions enabled by forecasted spikes:
 
 - pre-ventilate stations with clean air
 - temporarily close external intake dampers
-- increase internal recirculation during spike windows :contentReference[oaicite:12]{index=12}
+- increase internal recirculation during spike windows 
 
 What matters to the stakeholder:
 
@@ -366,13 +354,11 @@ What matters to the stakeholder:
 - false alarm rate vs missed spike risk
 - horizon trade-off: earlier warning vs accuracy
 
----
-
 # Closing
 
 ## Key takeaways
 
-- Case Study 2 directly addresses Case Study 1 limitations by moving from daily aggregation to hourly forecasting and by prioritizing meteorological drivers :contentReference[oaicite:13]{index=13}
+- Case Study 2 directly addresses Case Study 1 limitations by moving from daily aggregation to hourly forecasting and by prioritizing meteorological drivers 
 - Linear and Lasso establish interpretable baselines
 - N-HiTS provides added capacity for nonlinear and multi-scale temporal patterns
 - Model selection is grounded in time-respecting validation and RMSE comparison across horizons
@@ -387,8 +373,6 @@ Suggested extensions:
 - stress-test on extreme events and seasonal regimes
 - station generalization: train on one station, test on another
 - deploy a lightweight inference pipeline for hourly updates
-
----
 
 # Appendix
 
