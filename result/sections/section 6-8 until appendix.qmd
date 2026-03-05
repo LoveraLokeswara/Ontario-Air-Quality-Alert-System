@@ -1,0 +1,153 @@
+---
+title: "Case Study 2: Technical Presentation"
+subtitle: "STAT 946 – Case Studies in Data Science"
+author:
+  - "Dario Greco"
+  - "Lovera Lokeswara"
+  - "Sanika Poojary"
+  - "Sophia Feng"
+date: "March 9, 2026"
+format:
+  beamer:
+    theme: Madrid
+    colortheme: dolphin
+    aspectratio: 169
+    fontsize: 10pt
+    incremental: false
+    number-sections: false
+    pdf-engine: pdflatex
+execute:
+  echo: false
+  warning: false
+  message: false
+header-includes:
+  - \usepackage{amsmath,amssymb}
+  - \usepackage{booktabs}
+  - \usepackage{siunitx}
+  - \newcommand{\E}{\mathbb{E}}
+  - \newcommand{\Var}{\mathrm{Var}}
+---
+
+# Comparison and evaluation
+
+## Metrics
+
+Primary metric:
+
+$$
+RMSE =
+\sqrt{
+\frac{1}{n}
+\sum_{i=1}^{n}(y_i-\hat y_i)^2
+}
+$$
+
+Report RMSE by:
+
+- horizon: 4, 6, 24 hours
+- overall test period
+- spike subset (optional): top quantile of $PM_{2.5}$
+
+---
+
+## Results: simple vs complex
+
+Include:
+
+- table: RMSE (Linear, Lasso, N-HiTS) for each horizon
+- plot: predicted vs observed for a representative spike period
+- error decomposition:
+  - daytime vs nighttime
+  - seasonal slice (winter vs summer)
+
+Interpretation prompts:
+
+- where N-HiTS improves most (longer horizon, spikes, nonlinear regimes)
+- where baselines remain competitive (short horizon, stable regimes)
+
+---
+
+## Diagnostics and failure modes
+
+Diagnostics you can show:
+
+- residuals over time
+- error vs predicted level (heteroskedasticity)
+- performance during spike days
+
+Failure modes to name explicitly:
+
+- underprediction of peaks
+- lag in reacting to abrupt changes
+- sensitivity to missingness or covariate shift
+
+# Model inference and operational use
+
+## Inference outputs we deliver
+
+For each hour $t$:
+
+- point forecasts: $\hat{y}_{t+4}$, $\hat{y}_{t+6}$, $\hat{y}_{t+24}$
+- optional uncertainty outputs (if you generated them):
+  - prediction intervals or quantiles
+
+Operational framing:
+
+- trigger thresholds for ventilation actions
+- lead time difference between 4-hour and 24-hour decisions
+
+---
+
+## How the TTC can use the forecast
+
+Actions enabled by forecasted spikes:
+
+- pre-ventilate stations with clean air
+- temporarily close external intake dampers
+- increase internal recirculation during spike windows 
+
+What matters to the stakeholder:
+
+- timing accuracy of spikes (hour-level)
+- false alarm rate vs missed spike risk
+- horizon trade-off: earlier warning vs accuracy
+
+# Closing
+
+## Key takeaways
+
+- Case Study 2 directly addresses Case Study 1 limitations by moving from daily aggregation to hourly forecasting and by prioritizing meteorological drivers 
+- Linear and Lasso establish interpretable baselines
+- N-HiTS provides added capacity for nonlinear and multi-scale temporal patterns
+- Model selection is grounded in time-respecting validation and RMSE comparison across horizons
+
+---
+
+## Next steps
+
+Suggested extensions:
+
+- add probabilistic forecasting (quantiles) for decision thresholds
+- stress-test on extreme events and seasonal regimes
+- station generalization: train on one station, test on another
+- deploy a lightweight inference pipeline for hourly updates
+
+# Appendix
+
+## Appendix: hyperparameters and training settings
+
+Include:
+
+- best hyperparameters per model and horizon
+- compute details (GPU type, runtime)
+- seeds and reproducibility settings
+
+---
+
+## Appendix: additional figures
+
+Include:
+
+- additional time slices (spike weeks)
+- calibration plots if probabilistic
+- ablations: removing weather groups or reducing history length

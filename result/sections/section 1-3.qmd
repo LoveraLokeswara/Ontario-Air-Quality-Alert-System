@@ -1,0 +1,150 @@
+---
+title: "Case Study 2: Technical Presentation"
+subtitle: "STAT 946 – Case Studies in Data Science"
+author:
+  - "Dario Greco"
+  - "Lovera Lokeswara"
+  - "Sanika Poojary"
+  - "Sophia Feng"
+date: "March 9, 2026"
+format:
+  beamer:
+    theme: Madrid
+    colortheme: dolphin
+    aspectratio: 169
+    fontsize: 10pt
+    incremental: false
+    number-sections: false
+    pdf-engine: pdflatex
+execute:
+  echo: false
+  warning: false
+  message: false
+header-includes:
+  - \usepackage{amsmath,amssymb}
+  - \usepackage{booktabs}
+  - \usepackage{siunitx}
+  - \newcommand{\E}{\mathbb{E}}
+  - \newcommand{\Var}{\mathrm{Var}}
+---
+
+# Intro
+
+## Background, stakeholders, operational value
+
+Organization: Toronto Transit Commission (TTC)  
+Primary stakeholder: Director of Station Operations and Maintenance
+
+Operational context:
+
+- Subway stations rely on HVAC systems that draw outside air
+- During outdoor $PM_{2.5}$ spikes, filters degrade faster and indoor air quality risk increases
+- Forecasts enable proactive station ventilation actions (pre-ventilate, reduce intake during spikes, recirculation)
+
+---
+
+## Research questions
+
+Primary:
+
+How accurately can hourly $PM_{2.5}$ in Ontario be forecasted at short horizon ($h = 4$ hours) using meteorological and environmental data? 
+
+Secondary:
+
+How much historical context is needed for optimal performance (for example 6, 12, 24, 72 hours of past observations)? 
+
+---
+
+## Talk workflow
+
+1. Case Study 1 limitations and the pivot
+2. Data processing and aggregation for hourly forecasting
+3. Simple baselines: linear regression, Lasso
+4. Tuning baselines: cross-validation
+5. Complex model: N-HiTS
+6. Tuning N-HiTS: grid search
+7. Comparison: RMSE and error behavior
+8. Model inference and operational interpretation
+9. Closing and next steps
+
+# Addressing Case Study 1 limitations
+
+## What Case Study 1 could not do
+
+Limitations identified:
+
+- Traffic data only available daily, forcing hourly $PM_{2.5}$ to be averaged into daily values, losing spike timing
+- Traffic impact was weak. Weather and seasonality were the true drivers
+
+---
+
+## Case Study 2 objective and pivot
+
+Key changes:
+
+- Remove unhelpful traffic signal, focus entirely on weather drivers 
+- Use hourly weather to predict hourly $PM_{2.5}$ to capture spike timing and improve operational usefulness 
+
+Modeling target:
+
+$$
+p(y_{t+h,s} \mid \mathcal{D}_{\le t})
+$$
+
+for $h \in \{4,6,24\}$ hours and site $s$.
+
+# Data and preprocessing
+
+## Data sources and alignment plan
+
+Air quality: hourly pollutant concentrations by station and hour 
+Weather: hourly meteorology (temperature, humidity, wind speed/direction, precipitation) 
+
+Alignment:
+
+- Join by timestamp (date-hour) at a Toronto monitoring station
+- Ensure overlapping time periods (2020 onward noted in proposal) 
+
+---
+
+## Cleaning and aggregation workflow
+
+Core steps:
+
+- Time normalization: consistent timezone, hourly index
+- Merge: hourly weather with hourly $PM_{2.5}$ by timestamp
+- Missingness handling:
+  - remove or impute short gaps (state choice and justify)
+  - keep a missingness indicator if used
+- Feature construction:
+  - lagged $PM_{2.5}$ history windows (for 6, 12, 24, 72 hours)
+  - weather lags if used
+  - calendar effects (hour-of-day, day-of-week, month)
+
+Leakage guardrail:
+
+- all features at time $t$ must use information available at or before $t$
+
+---
+
+## Supervised learning dataset construction (sliding windows)
+
+For each time $t$:
+
+Inputs:
+
+$$
+X_t = \big[\; y_{t-1:t-L},\; x_{t:t-L_x}\; \big]
+$$
+
+Targets:
+
+$$
+Y_t^{(h)} = y_{t+h}
+$$
+
+where $L$ is historical context length and $h \in \{4,6,24\}$.
+
+Output:
+
+- one dataset per horizon, or multi-horizon formulation (state which you used)

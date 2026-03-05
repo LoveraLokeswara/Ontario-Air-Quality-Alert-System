@@ -1,0 +1,92 @@
+---
+title: "Case Study 2: Technical Presentation"
+subtitle: "STAT 946 – Case Studies in Data Science"
+author:
+  - "Dario Greco"
+  - "Lovera Lokeswara"
+  - "Sanika Poojary"
+  - "Sophia Feng"
+date: "March 9, 2026"
+format:
+  beamer:
+    theme: Madrid
+    colortheme: dolphin
+    aspectratio: 169
+    fontsize: 10pt
+    incremental: false
+    number-sections: false
+    pdf-engine: pdflatex
+execute:
+  echo: false
+  warning: false
+  message: false
+header-includes:
+  - \usepackage{amsmath,amssymb}
+  - \usepackage{booktabs}
+  - \usepackage{siunitx}
+  - \newcommand{\E}{\mathbb{E}}
+  - \newcommand{\Var}{\mathrm{Var}}
+---
+
+# Simple models
+
+## Baseline 1: linear regression
+
+Goal:
+
+Establish an interpretable baseline with minimal capacity.
+
+Example formulation:
+
+$$
+y_{t+h} = \beta_0 + \beta^\top X_t + \varepsilon_t
+$$
+
+Key choices to state:
+
+- what is included in $X_t$ (lags, weather, calendar)
+- standardization for numeric stability
+- whether you fit separate models per horizon
+
+---
+
+## Baseline 2: Lasso regression
+
+Motivation:
+
+High-dimensional lag and weather features can create collinearity.
+
+Lasso:
+
+$$
+\hat{\beta}
+=
+\arg\min_{\beta}
+\sum_t (y_{t+h}-\beta_0-\beta^\top X_t)^2
++
+\lambda \lVert \beta \rVert_1
+$$
+
+Why it matters:
+
+- implicit feature selection
+- can clarify which lags and weather drivers dominate
+
+---
+
+## Fine-tuning simple models (cross-validated)
+
+Time-respecting validation:
+
+- blocked split or rolling-origin evaluation (state which)
+- tune hyperparameters only on validation
+
+Tuning:
+
+- Lasso: choose $\lambda$ by cross-validation on training window
+- optional: choose history length $L \in \{6,12,24,72\}$ by validation
+
+Report:
+
+- best $\lambda$ per horizon
+- best history window per horizon (if tuned)
