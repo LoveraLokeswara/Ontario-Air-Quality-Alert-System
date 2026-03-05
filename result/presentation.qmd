@@ -13,7 +13,7 @@ format:
     colortheme: dolphin
     aspectratio: 169
     fontsize: 10pt
-    incremental: true
+    incremental: false
     number-sections: false
     pdf-engine: pdflatex
 execute:
@@ -28,396 +28,384 @@ header-includes:
   - \newcommand{\Var}{\mathrm{Var}}
 ---
 
-# Presentation Goals
+# Intro
 
-## Objective of This Presentation
+## Background, stakeholders, operational value
 
-We aim to demonstrate that:
+Organization: Toronto Transit Commission (TTC)  
+Primary stakeholder: Director of Station Operations and Maintenance :contentReference[oaicite:0]{index=0}
 
-- The analysis is scientifically justified
-- The modeling pipeline is technically reproducible
-- Assumptions and uncertainty are explicitly understood
-- Computational decisions are justified
-- The approach meaningfully extends Case Study 1
+Operational context:
+
+- Subway stations rely on HVAC systems that draw outside air
+- During outdoor $PM_{2.5}$ spikes, filters degrade faster and indoor air quality risk increases :contentReference[oaicite:1]{index=1}
+- Forecasts enable proactive station ventilation actions (pre-ventilate, reduce intake during spikes, recirculation) :contentReference[oaicite:2]{index=2}
 
 ---
 
-# Problem Context
+## Research questions
 
-## Scientific Objective
+Primary:
 
-Goal:
+How accurately can hourly $PM_{2.5}$ in Ontario be forecasted at short horizons ($h \in \{4,6,24\}$ hours) using meteorological and environmental data? :contentReference[oaicite:3]{index=3}
 
-Predict future air pollution concentration
+Secondary:
 
-$$
-y_{t+h,s}
-$$
+How much historical context is needed for optimal performance (for example 6, 12, 24, 72 hours of past observations)? :contentReference[oaicite:4]{index=4}
 
-using historical pollution and meteorological drivers.
+---
 
-Where:
+## Talk workflow
 
-- $t$: time index  
-- $h$: forecast horizon  
-- $s$: monitoring location  
+1. Case Study 1 limitations and the pivot
+2. Data processing and aggregation for hourly forecasting
+3. Simple baselines: linear regression, Lasso
+4. Tuning baselines: cross-validation
+5. Complex model: N-HiTS
+6. Tuning N-HiTS: grid search
+7. Comparison: RMSE and error behavior
+8. Model inference and operational interpretation
+9. Closing and next steps
 
-Output:
+---
+
+# Addressing Case Study 1 limitations
+
+## What Case Study 1 could not do
+
+Limitations identified:
+
+- Traffic data only available daily, forcing hourly $PM_{2.5}$ to be averaged into daily values, losing spike timing :contentReference[oaicite:5]{index=5}
+- Traffic impact was weak; weather and seasonality were the true drivers :contentReference[oaicite:6]{index=6}
+
+---
+
+## Case Study 2 objective and pivot
+
+Key changes:
+
+- Remove unhelpful traffic signal, focus entirely on weather drivers :contentReference[oaicite:7]{index=7}
+- Use hourly weather to predict hourly $PM_{2.5}$ to capture spike timing and improve operational usefulness :contentReference[oaicite:8]{index=8}
+
+Modeling target:
 
 $$
 p(y_{t+h,s} \mid \mathcal{D}_{\le t})
 $$
 
-predictive distribution rather than point estimate.
+for $h \in \{4,6,24\}$ hours and site $s$.
 
 ---
 
-## Data Structure
+# Data and preprocessing
 
-Dataset characteristics:
+## Data sources and alignment plan
 
-- Temporal resolution: hourly observations
-- Multiple monitoring stations
-- Strong seasonality
-- Missing observations
-- Extreme pollution events
+Air quality: hourly pollutant concentrations by station and hour :contentReference[oaicite:9]{index=9}  
+Weather: hourly meteorology (temperature, humidity, wind speed/direction, precipitation) :contentReference[oaicite:10]{index=10}
 
-Challenges:
+Alignment:
 
-- Temporal dependence
-- Nonlinearity
-- Distributional skewness
-- Covariate interaction effects
+- Join by timestamp (date-hour) at a Toronto monitoring station
+- Ensure overlapping time periods (2020 onward noted in proposal) :contentReference[oaicite:11]{index=11}
 
 ---
 
-# Case Study 1 Baseline
+## Cleaning and aggregation workflow
 
-## Previous Approach
+Core steps:
 
-Baseline model:
+- Time normalization: consistent timezone, hourly index
+- Merge: hourly weather with hourly $PM_{2.5}$ by timestamp
+- Missingness handling:
+  - remove or impute short gaps (state choice and justify)
+  - keep a missingness indicator if used
+- Feature construction:
+  - lagged $PM_{2.5}$ history windows (for 6, 12, 24, 72 hours)
+  - weather lags if used
+  - calendar effects (hour-of-day, day-of-week, month)
 
-- Describe CS1 model briefly here
+Leakage guardrail:
 
-Strengths:
-- Fast
-- Interpretable
-- Stable training
-
-Limitations:
-
-- Limited nonlinear modeling
-- Weak long-term dependency capture
-- Poor extreme-event prediction
-- Limited uncertainty characterization
+- all features at time $t$ must use information available at or before $t$
 
 ---
 
-# Motivation for Case Study 2
+## Supervised learning dataset construction (sliding windows)
 
-## Why a More Advanced Method?
+For each time $t$:
 
-Key limitation addressed:
-
-Traditional models assume simplified temporal relationships.
-
-Air quality dynamics exhibit:
-
-- long memory
-- nonlinear interactions
-- regime changes
-
-Therefore we introduce a computationally intensive model capable of learning complex temporal structure.
-
----
-
-# Methodology
-
-## Model Overview
-
-We model forecasts using
+Inputs:
 
 $$
-\hat{y}_{t+h,s}
+X_t = \big[\; y_{t-1:t-L},\; x_{t:t-L_x}\; \big]
+$$
+
+Targets:
+
+$$
+Y_t^{(h)} = y_{t+h}
+$$
+
+where $L$ is historical context length and $h \in \{4,6,24\}$.
+
+Output:
+
+- one dataset per horizon, or multi-horizon formulation (state which you used)
+
+---
+
+# Simple models
+
+## Baseline 1: linear regression
+
+Goal:
+
+Establish an interpretable baseline with minimal capacity.
+
+Example formulation:
+
+$$
+y_{t+h} = \beta_0 + \beta^\top X_t + \varepsilon_t
+$$
+
+Key choices to state:
+
+- what is included in $X_t$ (lags, weather, calendar)
+- standardization for numeric stability
+- whether you fit separate models per horizon
+
+---
+
+## Baseline 2: Lasso regression
+
+Motivation:
+
+High-dimensional lag and weather features can create collinearity.
+
+Lasso:
+
+$$
+\hat{\beta}
 =
-f_\theta(
-x_{\le t,s},
-y_{\le t,s}
-)
+\arg\min_{\beta}
+\sum_t (y_{t+h}-\beta_0-\beta^\top X_t)^2
++
+\lambda \lVert \beta \rVert_1
 $$
 
-where:
+Why it matters:
 
-- $f_\theta$ is a deep sequence model
-- parameters learned via gradient optimization
-
-(Replace with LSTM / TCN / TFT description)
+- implicit feature selection
+- can clarify which lags and weather drivers dominate
 
 ---
 
-## Statistical Assumptions
+## Fine-tuning simple models (cross-validated)
 
-Assumptions include:
+Time-respecting validation:
 
-- Conditional dependence on past observations
-- Stationarity within training window
-- Covariates available at forecast time
-- Measurement noise treated as stochastic error
+- blocked split or rolling-origin evaluation (state which)
+- tune hyperparameters only on validation
 
-Limitations arise if these assumptions fail.
+Tuning:
+
+- Lasso: choose $\lambda$ by cross-validation on training window
+- optional: choose history length $L \in \{6,12,24,72\}$ by validation
+
+Report:
+
+- best $\lambda$ per horizon
+- best history window per horizon (if tuned)
 
 ---
 
-## Uncertainty Modeling
+# Complex model: N-HiTS
 
-Predictive uncertainty estimated via:
+## Why N-HiTS
 
-- quantile regression / probabilistic output / ensemble
+Goal:
 
-Example:
+Capture nonlinearities and multi-scale temporal structure with a deep, computationally intensive model.
+
+High-level:
+
+- learns temporal patterns at multiple resolutions
+- better suited for spike behavior and nonlinearity than linear baselines
+
+Forecasting abstraction:
 
 $$
-P(y_{t+h} \le q_\tau) = \tau
+\hat{y}_{t+h} = f_\theta(X_t)
 $$
 
-Produces calibrated prediction intervals.
+where $f_\theta$ is N-HiTS.
 
 ---
 
-# Computational Implementation
+## N-HiTS implementation details to present
 
-## Training Procedure
+Minimum technical details to include:
 
-Optimization:
+- input window length $L$
+- forecast horizon output (single horizon or multi-horizon head)
+- block structure:
+  - number of stacks
+  - number of blocks per stack
+  - basis functions / interpolation approach (as used in your code)
+- loss function (MSE, MAE, or quantile loss if probabilistic)
+- regularization (dropout, weight decay, early stopping)
 
-- Loss function: specify here
-- Optimizer: Adam
-- Learning rate scheduling
-- Early stopping
+Compute:
 
-Training setup:
-
-- GPU computation (Google Colab)
-- Batch training
-- Multiple epochs
-
-Runtime considerations:
-
-- Training time
-- Memory constraints
-- Model scalability
+- GPU training (Colab), runtime per configuration
 
 ---
 
-# Validation Strategy
+## Fine-tuning N-HiTS (grid search)
 
-## Leakage-Free Design
+Grid search over:
 
-Time-respecting split:
-
-- Training period
-- Validation period
-- Test period
-
-No future information used during training.
-
-Forecast evaluated strictly forward in time.
-
----
-
-## Hyperparameter Tuning
-
-Tuned parameters:
-
+- $L \in \{6,12,24,72\}$
 - learning rate
-- sequence length
-- hidden dimension
-- dropout rate
+- batch size
+- number of blocks / hidden width
+- dropout, weight decay
+- early stopping patience
 
-Search strategy:
+Selection criterion:
 
-- random or grid search
-
-Validation set only used for tuning.
+- validation RMSE for each horizon
+- select best model per horizon (or one model overall, state which)
 
 ---
 
-# Evaluation Metrics
+# Comparison and evaluation
 
-## Point Forecast Accuracy
+## Metrics
 
-Metrics:
-
-- RMSE
-- MAE
+Primary metric:
 
 $$
 RMSE =
 \sqrt{
 \frac{1}{n}
-\sum (y_i-\hat y_i)^2
+\sum_{i=1}^{n}(y_i-\hat y_i)^2
 }
 $$
 
----
+Report RMSE by:
 
-## Uncertainty Evaluation
-
-We evaluate:
-
-- Prediction interval coverage
-- Interval sharpness
-- Calibration reliability
-
-Goal:
-
-High coverage with minimal interval width.
+- horizon: 4, 6, 24 hours
+- overall test period
+- spike subset (optional): top quantile of $PM_{2.5}$
 
 ---
 
-# Results
+## Results: simple vs complex
 
-## Performance Comparison
+Include:
 
-Compare against Case Study 1:
+- table: RMSE (Linear, Lasso, N-HiTS) for each horizon
+- plot: predicted vs observed for a representative spike period
+- error decomposition:
+  - daytime vs nighttime
+  - seasonal slice (winter vs summer)
 
-- accuracy improvement
-- robustness during extreme events
-- horizon stability
+Interpretation prompts:
 
-Insert results table or figure.
-
----
-
-## Diagnostic Analysis
-
-Diagnostics performed:
-
-- residual analysis
-- temporal error trends
-- seasonal performance comparison
-
-Observed failure modes:
-
-- peak underestimation
-- regime transition difficulty
+- where N-HiTS improves most (longer horizon, spikes, nonlinear regimes)
+- where baselines remain competitive (short horizon, stable regimes)
 
 ---
 
-# Technical Value Added
+## Diagnostics and failure modes
 
-## Improvements Over Case Study 1
+Diagnostics you can show:
 
-New capabilities:
+- residuals over time
+- error vs predicted level (heteroskedasticity)
+- performance during spike days
 
-- nonlinear temporal learning
-- probabilistic forecasting
-- improved extreme-event prediction
+Failure modes to name explicitly:
 
-Trade-offs introduced:
-
-- higher runtime
-- reduced interpretability
-- increased compute requirements
+- underprediction of peaks
+- lag in reacting to abrupt changes
+- sensitivity to missingness or covariate shift
 
 ---
 
-# Limitations
+# Model inference and operational use
 
-## Statistical Risks
+## Inference outputs we deliver
 
-Potential risks:
+For each hour $t$:
 
-- overfitting
-- covariate shift
-- sensor bias
-- model instability under unseen regimes
+- point forecasts: $\hat{y}_{t+4}$, $\hat{y}_{t+6}$, $\hat{y}_{t+24}$
+- optional uncertainty outputs (if you generated them):
+  - prediction intervals or quantiles
 
-These define future research directions.
+Operational framing:
 
----
-
-# Reproducibility
-
-## Repository Structure
-
-Reproduction steps:
-
-1. Install dependencies
-2. Load processed dataset
-3. Run training notebook
-4. Execute evaluation pipeline
-
-Artifacts stored:
-
-- trained weights
-- prediction outputs
-- evaluation metrics
+- trigger thresholds for ventilation actions
+- lead time difference between 4-hour and 24-hour decisions
 
 ---
 
-## Computational Reproduction
+## How the TTC can use the forecast
 
-Execution platform:
+Actions enabled by forecasted spikes:
 
-- Google Colab GPU
+- pre-ventilate stations with clean air
+- temporarily close external intake dampers
+- increase internal recirculation during spike windows :contentReference[oaicite:12]{index=12}
 
-Approximate runtime:
+What matters to the stakeholder:
 
-- preprocessing
-- training
-- evaluation
-
-Random seeds fixed where possible.
-
----
-
-# Key Takeaways
-
-## Summary
-
-- Advanced model improves forecasting performance
-- Uncertainty estimates are quantitatively validated
-- Method addresses limitations from Case Study 1
-- Computational cost justified by predictive gain
+- timing accuracy of spikes (hour-level)
+- false alarm rate vs missed spike risk
+- horizon trade-off: earlier warning vs accuracy
 
 ---
 
-# Questions
+# Closing
 
-## Q&A
+## Key takeaways
 
-We welcome discussion on:
+- Case Study 2 directly addresses Case Study 1 limitations by moving from daily aggregation to hourly forecasting and by prioritizing meteorological drivers :contentReference[oaicite:13]{index=13}
+- Linear and Lasso establish interpretable baselines
+- N-HiTS provides added capacity for nonlinear and multi-scale temporal patterns
+- Model selection is grounded in time-respecting validation and RMSE comparison across horizons
 
-- assumptions
-- validation design
-- uncertainty interpretation
-- scalability
+---
+
+## Next steps
+
+Suggested extensions:
+
+- add probabilistic forecasting (quantiles) for decision thresholds
+- stress-test on extreme events and seasonal regimes
+- station generalization: train on one station, test on another
+- deploy a lightweight inference pipeline for hourly updates
 
 ---
 
 # Appendix
 
-## Additional Model Details
+## Appendix: hyperparameters and training settings
 
 Include:
 
-- architecture diagram
-- hyperparameters
-- ablation studies
+- best hyperparameters per model and horizon
+- compute details (GPU type, runtime)
+- seeds and reproducibility settings
 
 ---
 
-## Additional Diagnostics
+## Appendix: additional figures
 
-- calibration curves
-- residual plots
-- site-level performance
+Include:
 
----
-
-## Reproducibility Notes
-
-Large artifacts stored externally if required.
-
-Instructions documented in repository README.
+- additional time slices (spike weeks)
+- calibration plots if probabilistic
+- ablations: removing weather groups or reducing history length
