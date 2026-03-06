@@ -1,0 +1,89 @@
+---
+title: "Case Study 2: Technical Presentation"
+subtitle: "STAT 946 – Case Studies in Data Science"
+author:
+  - "Dario Greco"
+  - "Lovera Lokeswara"
+  - "Sanika Poojary"
+  - "Sophia Feng"
+date: "March 9, 2026"
+format:
+  beamer:
+    theme: Madrid
+    colortheme: dolphin
+    aspectratio: 169
+    fontsize: 10pt
+    incremental: false
+    number-sections: false
+    pdf-engine: pdflatex
+execute:
+  echo: false
+  warning: false
+  message: false
+header-includes:
+  - \usepackage{amsmath,amssymb}
+  - \usepackage{booktabs}
+  - \usepackage{siunitx}
+  - \newcommand{\E}{\mathbb{E}}
+  - \newcommand{\Var}{\mathrm{Var}}
+---
+# Baseline models
+
+## 1. Establishing the Baseline
+
+**The Challenge:** Predicting PM2.5 requires feeding the model a historical window of multiple weather variables (temp, wind, humidity). This creates a massive, highly collinear feature space.
+
+**The Solution: Lasso ($L_1$ Regularization)**
+
+$$
+\hat{\beta} = \arg\min_{\beta} \underbrace{\sum_t (y_{t+h} - \beta_0 - \beta^\top X_t)^2}_{\text{1. Minimize Error}} + \underbrace{\lambda \lVert \beta \rVert_1}_{\text{2. Penalty Term}}
+$$
+
+**Why it fits our data:**
+
+- **Automatic Feature Selection:** The penalty shrinks the weights of irrelevant lags and weather noise to *exactly zero*.
+
+- **Interpretability:** Leaves us with a clean, understandable baseline of what truly drives PM2.5.
+
+---
+
+## 2. Implementation Workflow
+
+**1. Data Transformation**
+
+- **Flattening:** Reshaped 2D historical weather windows into 1D vectors for Lasso.
+
+- **Scaling:** Standardized ($Z$-scores) all inputs to ensure fair penalty application.
+
+**2. Strict Time-Series Splitting**
+
+- Maintained chronological order (Train $\rightarrow$ Val $\rightarrow$ Test) to completely avoid future data leakage.
+
+**3. Hyperparameter Fine-Tuning**
+
+- Tuned the penalty strength using the Validation set.
+
+- Evaluated multiple historical *lookback windows* (e.g., 24h vs. 48h) to find the optimal "memory" length for the model.
+
+---
+
+## 3. Limitations & The Path Forward
+
+**What Lasso Did Well:**
+
+- Filtered out noise and provided a solid, interpretable RMSE benchmark.
+
+
+
+**The Limitation:**
+
+- Lasso is fundamentally a **linear** model. 
+
+- It struggles to capture **non-linear, dynamic shocks**.
+
+
+
+
+**The Solution: N-HiTS**
+
+- We need a complex architecture capable of separating slow, linear climate trends from sudden, non-linear weather shocks.
