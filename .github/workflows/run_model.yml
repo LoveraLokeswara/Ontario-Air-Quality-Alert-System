@@ -1,4 +1,4 @@
-name: Test NHITS Pipeline
+name: Run NHITS Model Test
 
 on:
   push:
@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-model:
+  run-nhits:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install uv
@@ -21,15 +21,3 @@ jobs:
 
       - name: Run NHITS model
         run: uv run python sweep_real_nhits.py
-
-      - name: Setup Quarto
-        uses: quarto-dev/quarto-actions/setup@v2
-
-      - name: Render presentation
-        run: quarto render results/presentation.qmd
-
-      - name: Upload results
-        uses: actions/upload-artifact@v4
-        with:
-          name: results
-          path: results/
