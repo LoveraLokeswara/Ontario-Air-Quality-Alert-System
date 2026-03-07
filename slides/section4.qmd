@@ -55,15 +55,13 @@ $$
 
 - **Scaling:** Standardized ($Z$-scores) all inputs to ensure fair penalty application.
 
-**2. Strict Time-Series Splitting**
+**2. Time-Series Cross Validation**
 
-- Maintained chronological order (Train $\rightarrow$ Val $\rightarrow$ Test) to completely avoid future data leakage.
+- **Expanding Window (5 Folds):** Standard cross-validation randomly shuffles data, causing future data to leak into the past. We used `TimeSeriesSplit` to strictly train on the past and validate on the immediate future.
 
 **3. Hyperparameter Fine-Tuning**
 
-- Tuned the penalty strength using the Validation set.
-
-- Evaluated multiple historical *lookback windows* (e.g., 24h vs. 48h) to find the optimal "memory" length for the model.
+- **Automated Alpha Sweep:** Utilized `LassoCV` to automatically sweep for the optimal penalty strength across our 5 chronological folds.
 
 ---
 
@@ -74,7 +72,6 @@ $$
 - Filtered out noise and provided a solid, interpretable RMSE benchmark.
 
 
-
 **The Limitation:**
 
 - Lasso is fundamentally a **linear** model. 
@@ -82,8 +79,8 @@ $$
 - It struggles to capture **non-linear, dynamic shocks**.
 
 
-
-
 **The Solution: N-HiTS**
 
 - We need a complex architecture capable of separating slow, linear climate trends from sudden, non-linear weather shocks.
+
+
