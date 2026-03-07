@@ -31,19 +31,19 @@ header-includes:
 
 ## 1. Establishing the Baseline
 
-**The Challenge:** Predicting PM2.5 requires feeding the model a historical window of multiple weather variables (temp, wind, humidity). This creates a massive, highly collinear feature space.
+**The Challenge:** Predicting PM2.5 requires feeding the model a historical window of multiple weather variables (temp, wind, humidity). This creates a highly dimensional, collinear feature space.
 
 **The Solution: Lasso ($L_1$ Regularization)**
 
 $$
-\hat{\beta} = \arg\min_{\beta} \underbrace{\sum_t (y_{t+h} - \beta_0 - \beta^\top X_t)^2}_{\text{1. Minimize Error}} + \underbrace{\lambda \lVert \beta \rVert_1}_{\text{2. Penalty Term}}
+\hat{\beta} = \arg\min_{\beta} \underbrace{\sum_t (\text{PM2.5}_{t+h} - \beta_0 - \beta^\top X_t)^2}_{\text{1. Minimize Error}} + \underbrace{\lambda \lVert \beta \rVert_1}_{\text{2. Penalty Term}}
 $$
 
 **Why it fits our data:**
 
-- **Automatic Feature Selection:** The penalty shrinks the weights of irrelevant lags and weather noise to *exactly zero*.
+- **Feature Selection:** The penalty shrinks the weights of irrelevant lags and weather noise to *exactly zero*.
 
-- **Interpretability:** Leaves us with a clean, understandable baseline of what truly drives PM2.5.
+- **Interpretability:** Leaves us with a sparse, understandable baseline of what truly drives PM2.5.
 
 ---
 
@@ -53,15 +53,15 @@ $$
 
 - **Flattening:** Reshaped 2D historical weather windows into 1D vectors for Lasso.
 
-- **Scaling:** Standardized ($Z$-scores) all inputs to ensure fair penalty application.
+- **Scaling:** Standardized ($Z$-scores) all inputs to ensure unbiased penalty application across varying physical units.
 
 **2. Time-Series Cross Validation**
 
-- **Expanding Window (5 Folds):** Standard cross-validation randomly shuffles data, causing future data to leak into the past. We used `TimeSeriesSplit` to strictly train on the past and validate on the immediate future.
+- **Expanding Window (5 Folds):** Standard cross-validation randomly shuffles data, causing future data to leak into the past. We used `TimeSeriesSplit` to strictly train on a growing historical window and validate on the immediate rolling future, keeping the final test set completely isolated.
 
 **3. Hyperparameter Fine-Tuning**
 
-- **Automated Alpha Sweep:** Utilized `LassoCV` to automatically sweep for the optimal penalty strength across our 5 chronological folds.
+- **Automated Alpha Sweep:** Utilized `LassoCV` to dynamically sweep for the optimal penalty strength ($\alpha \equiv \lambda$) across our 5 chronological folds.
 
 ---
 
@@ -81,6 +81,6 @@ $$
 
 **The Solution: N-HiTS**
 
-- We need a complex architecture capable of separating slow, linear climate trends from sudden, non-linear weather shocks.
+- We need a complex architecture capable of separating slow atmospheric trends from sudden weather shocks.
 
 
