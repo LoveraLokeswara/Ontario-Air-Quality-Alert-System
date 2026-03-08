@@ -1,4 +1,4 @@
-# PM₂.₅ Short-Term Forecasting for TTC Air Quality Management
+# PM₂.₅ Short-Term Forecasting for TTC Air Quality Management 
 
 This repository contains the code and data used to forecast short-term PM₂.₅ (fine particulate matter) concentrations in Ontario using meteorological and environmental data. The project evaluates whether modern deep learning time-series models improve forecasting accuracy relative to simpler statistical baselines.
 The goal is to support operational decision-making for the Toronto Transit Commission (TTC) by predicting pollution spikes that may impact underground station ventilation systems.
@@ -108,6 +108,7 @@ Two forecasting approaches are implemented.
 Models are evaluated using:
 * RMSE (Root Mean Squared Error)
 * MAE (Mean Absolute Error)
+
 
 
 
