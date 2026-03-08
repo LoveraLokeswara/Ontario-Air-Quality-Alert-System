@@ -32,56 +32,291 @@ header-includes:
 
 ## Why N-HiTS
 
-Goal:
+\begin{alertblock}{Definition}
+N-HiTS: Neural Hierarchical Interpolation for Time Series
+\end{alertblock}
 
-Capture nonlinearities and multi-scale temporal structure with a deep, computationally intensive model.
+::: columns
 
-High-level:
+::: column
 
-- learns temporal patterns at multiple resolutions
-- better suited for spike behavior and nonlinearity than linear baselines
+Goal: capture nonlinearities and multi-scale temporal structure with a deep, compute-heavy model.
 
-Forecasting abstraction:
+Why it fits air-quality data:
+
+
+- multi-resolution learning (slow trends + fast spikes)
+- non-linear mapping from weather and seasonality to PM$_{2.5}$
+- residual learning to decompose signal into components
+
+:::
+
+::: column
+Input and output shapes:
 
 $$
-\hat{y}_{t+h} = f_\theta(X_t)
+x_t \in \mathbb{R}^{L \times d},\quad d=11
 $$
 
-where $f_\theta$ is N-HiTS.
+$$
+\hat{y}_{t+1:t+24} = f_\theta(x_t),\qquad
+\hat{y}_{t+4} = \left[\hat{y}_{t+1:t+24}\right]_4
+$$
+
+- lookback: $L \in \{24, 48\}$
+- horizon head: 24-step output, but we report the 4-hour-ahead value
+:::
+
+:::
 
 ---
 
-## N-HiTS implementation details to present
+## N-HiTS Architecture: Hierarchical multi-resolution
 
-Minimum technical details to include:
+::: columns
 
-- input window length $L$
-- forecast horizon output (single horizon or multi-horizon head)
-- block structure:
-  - number of stacks
-  - number of blocks per stack
-  - basis functions / interpolation approach (as used in your code)
-- loss function (MSE, MAE, or quantile loss if probabilistic)
-- regularization (dropout, weight decay, early stopping)
+::: column
+The N-HITS model as “3 frequency stacks":
+
+- Stack 1 (macro) $\rightarrow$ Block 1: max-pool $\times 4$, $n_\theta=6$
+- Stack 2 (mid) $\rightarrow$ Block 2: max-pool $\times 2$, $n_\theta=12$
+- Stack 3 (fine) $\rightarrow$ Block 3: no pooling, $n_\theta=24$
+
+<!-- Each stack captures patterns at a different temporal resolution, and the forecasts are combined by summation. -->
+
+<!-- Our model architecture only has 1 block per stack, so we have 3 blocks total. Each block has a different pooling size to capture different temporal scales.  -->
+
+
+<!-- Each block:
+
+- MLP encoder on pooled window
+- backcast reconstructs the input window
+- forecast produced via linear interpolation to 24 steps -->
+:::
+
+::: column
+![](../images/NHITS_architecture.png){width=100%}
+:::
+
+:::
+
+<!-- 
+## Block mechanics (OPTION 1)
+
+Inputs and outputs:
+
+- input window: $x \in \mathbb{R}^{B \times L \times d}$
+- backcast: $\widehat{x}^{(k)} \in \mathbb{R}^{B \times L \times d}$
+- forecast: $\widehat{y}^{(k)} \in \mathbb{R}^{B \times 24}$
+
+"""Where B is the backcast, L is the lookback, and d is the number of features (11)"""
+
+Pooling + MLP: The model learns a hidden representation summarizing the time window.
+
+$$
+h^{(k)} = \mathrm{MLP}\left(\mathrm{MaxPool}(x)\right)
+$$
+
+Backcast (reconstruction head): 
+"""This predicts what portion of the input signal the block can explain. Then the model subtracts it to get a residual. So the next block only sees the unexplained signal. (this is called residual learning)"""
+
+$$
+\widehat{x}^{(k)} = W_b h^{(k)}
+$$
+
+Forecast via hierarchical interpolation: 
+"""This produces a small number of forecast knots. (6 from block 1). Instead of predicting 24 values directly, the block predicts a coarse shape, then fills in the rest. This makes training more stable and efficient."""
+
+$$
+\theta^{(k)} = W_f h^{(k)},\qquad
+\widehat{y}^{(k)} = \mathrm{Interp}_{\text{linear}}\left(\theta^{(k)},\, 24\right)
+$$
+
+"""N-HiTS decomposes forecasting into multiple blocks. Each block captures patterns at a different temporal scale using pooled inputs, reconstructs part of the signal via residual learning, and contributes a forecast that is interpolated to the final horizon."""  -->
+
+
+---
+
+## Our N-HiTS structure
+
+Three frequency blocks:
+
+| Block | Pool size | Resolution captured | Forecast knots |
+|------|------|------|------|
+| Block 1 | 4 | long-term trends | 6 |
+| Block 2 | 2 | medium variation | 12 |
+| Block 3 | 1 | short-term spikes | 24 |
+
+Forecast combination:
+
+- each block produces a forecast
+- forecasts are summed
+- we evaluate the **4-hour-ahead prediction**
+
+<!-- "N-HiTS produces a full 24-step forecast at each block. The final prediction is the sum of block forecasts across different temporal resolutions. In our experiment we evaluate only the 4-hour-ahead value." -->
+
+
+---
+
+## How one N-HiTS block works
+
+Pipeline inside each block:
+
+::: columns
+
+::: column
+
+1. **Pooling (multi-scale view)**  
+   Compress the input window to capture patterns at a specific time scale.
+
+   - Block 1: coarse trends (pool ×4)  
+   - Block 2: medium variation (pool ×2)  
+   - Block 3: fine detail (pool ×1)
+
+2. **MLP encoder**  
+   A small neural network learns a hidden representation of the time window.
+
+3. **Backcast (signal explanation)**  
+   The block reconstructs the part of the input signal it can explain.
+
+:::
+
+::: column
+![](../images/NHITS_architecture.png){width=100%}
+:::
+
+:::
+
+---
+
+## How one N-HiTS block works
+
+Pipeline inside each block:
+
+::: columns
+
+::: column
+
+4. **Residual update**  
+   The explained signal is removed so the next block focuses on what remains.
+
+5. **Forecast generation**  
+   The block predicts a small set of forecast knots.
+
+6. **Interpolation to horizon**  
+   These knots are linearly interpolated to produce a 24-step forecast.
+
+:::
+
+::: column
+![](../images/NHITS_architecture.png){width=100%}
+:::
+
+:::
+
+Final prediction:
+$$
+\hat{y} = \hat{y}^{(1)} + \hat{y}^{(2)} + \hat{y}^{(3)}
+$$
+
+\begin{alertblock}{}
+Each block contributes a forecast at a different temporal resolution.
+\end{alertblock}
+
+
+<!-- ---
+
+## Multi-scale intuition
+
+Pooling defines resolution:
+
+- pool $\times 4$: compresses window, emphasizes slow trends (macro)
+- pool $\times 2$: mid-scale variation
+- pool $\times 1$: keeps full detail, captures spikes (fine)
+
+Forecast combines all three scales by summing forecasts. -->
+
+---
+
+## Target-specific residual learning
+
+Split features:
+
+- target: PM$_{2.5}$
+- exogenous: weather + time features
+
+Residuals are applied only to the target channel:
+
+$$
+r^{(1)} = y_{\text{target}} - \widehat{x}^{(1)}_{\text{target}}
+$$
+
+For block 2 and 3, the input is:
+
+$$
+x^{(k)} = \big[r^{(k-1)},\ \text{exog}\big]
+$$
+
+Final forecast is the sum of all block forecasts:
+
+$$
+\hat{y}_{t+1:t+24} = \widehat{y}^{(1)} + \widehat{y}^{(2)} + \widehat{y}^{(3)},
+\qquad
+\hat{y}_{t+4} = \left[\hat{y}_{t+1:t+24}\right]_4
+$$
+
+<!-- “Only the PM2.5 signal is decomposed across blocks. Each block explains part of the PM2.5 time series, and the remaining residual is passed to the next block together with the weather features. Each block produces a 24-hour forecast, and the final prediction is the sum of the block forecasts. In our experiments we evaluate the 4-hour-ahead value.” -->
+
+<!-- “N-HiTS uses residual stacking where each block explains part of the signal and passes the remaining residual to the next block. This allows the model to progressively decompose the time series into components at different temporal scales.”
+
+Then add one sentence about your modification:
+
+“In our implementation, the residual is applied only to the PM₂.₅ target variable, while weather features are passed unchanged as contextual inputs.” -->
+
+---
+
+## Training and evaluation
+
+Data:
+
+- standardized 11 features (PM$_{2.5}$ + weather + seasonal sin/cos)
+- split: 70% train, 15% validation, 15% test (time-ordered)
+
+Optimization:
+
+- loss: MSE
+- optimizer: Adam
+- epochs: up to 50
+- early stopping: patience = 8 (best val RMSE checkpoint)
+
+Metrics:
+
+- RMSE on test set for 4-hour-ahead prediction
 
 Compute:
 
-- GPU training (Colab), runtime per configuration
+- GPU (Waterloo Remote Server), batch size 128
+- runtime per config ~ 30 mins
+
 
 ---
 
-## Fine-tuning N-HiTS (grid search)
+## Hyperparameter tuning
 
-Grid search over:
+We run a small hyperparameter sweep centered on best-performing configs:
 
-- $L \in \{6,12,24,72\}$
-- learning rate
-- batch size
-- number of blocks / hidden width
-- dropout, weight decay
-- early stopping patience
+- lookback $L \in \{24, 48\}$
+- hidden width $\in \{128, 256, 512\}$
+- learning rate $\in \{0.001, 0.0005, 0.0001, 0.00005\}$
+- dropout $\in \{0.1\}$
 
-Selection criterion:
 
-- validation RMSE for each horizon
-- select best model per horizon (or one model overall, state which)
+Selection rule:
+
+- choose lowest validation RMSE
+- trainable parameters: 1,453,890 parameters
+
+\begin{alertblock}{Chosen config}
+$L=24$, hidden width $=256$, learning rate $=0.0001$, dropout $=0.1$
+\end{alertblock}
+

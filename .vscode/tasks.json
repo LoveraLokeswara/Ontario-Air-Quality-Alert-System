@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Render Quarto Document",
+			"type": "shell",
+			"command": "quarto",
+			"args": [
+				"render",
+				"${file}"
+			],
+			"group": "build"
+		}
+	]
+}
