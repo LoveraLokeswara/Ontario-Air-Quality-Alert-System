@@ -89,9 +89,9 @@ Two forecasting approaches are implemented.
 - A linear regression model with L1 regularization used as a strong interpretable baseline.
 
 Key characteristics:
-Handles multicollinearity
-Performs automatic feature selection
-Captures linear relationships between weather variables and PM₂.₅
+- Handles multicollinearity
+- Performs automatic feature selection
+- Captures linear relationships between weather variables and PM₂.₅
 
 
 2. N-HiTS (Neural Hierarchical Interpolation for Time Series)
@@ -107,5 +107,6 @@ Handling complex interactions between meteorology and pollution levels
 Models are evaluated using:
 - RMSE (Root Mean Squared Error)
 - MAE (Mean Absolute Error)
+
 
 
