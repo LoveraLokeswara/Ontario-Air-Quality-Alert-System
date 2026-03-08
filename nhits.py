@@ -23,7 +23,9 @@ def set_seed(seed=42):
 
 set_seed(42)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+print(f"Running on device: {device}")
+if device.type == 'cuda':
+    print(f"GPU Name: {torch.cuda.get_device_name(0)}")
 # ==========================================
 # 1. THE N-HITS ARCHITECTURE
 # ==========================================
@@ -65,10 +67,10 @@ class NHITSBlock(nn.Module):
 class RealNHITS(nn.Module):
     def __init__(self, input_dim, seq_len, hidden_dim=256, dropout_rate=0.1):
         super().__init__()
-        self.max_horizon = 24 
-        self.block1 = NHITSBlock(input_dim, seq_len, self.max_horizon, 4, 6, hidden_dim, dropout_rate)
-        self.block2 = NHITSBlock(input_dim, seq_len, self.max_horizon, 2, 12, hidden_dim, dropout_rate)
-        self.block3 = NHITSBlock(input_dim, seq_len, self.max_horizon, 1, 24, hidden_dim, dropout_rate)
+        self.max_horizon = 48 
+        self.block1 = NHITSBlock(input_dim, seq_len, self.max_horizon, 4, 12, hidden_dim, dropout_rate)
+        self.block2 = NHITSBlock(input_dim, seq_len, self.max_horizon, 2, 24, hidden_dim, dropout_rate)
+        self.block3 = NHITSBlock(input_dim, seq_len, self.max_horizon, 1, 48, hidden_dim, dropout_rate)
 
     def forward(self, x):
         exog = x[:, :, 1:] 
@@ -155,7 +157,7 @@ def run_trial(lb, lr, hd, drop, data, device, pm_mean, pm_std):
     return best_v_rmse, best_v_residuals
 
 if __name__ == "__main__":
-    print("Loading data for Scratch N-HiTS...", flush=True)
+    print("Loading data for N-HiTS...", flush=True)
     df = pd.read_csv("data/data_clean/cleaned_data_toronto_downtown.csv", low_memory=False)
     feats = ['PM_ppb', 'Temp (°C)', 'Rel Hum (%)', 'Wind Spd (km/h)', 'Stn Press (kPa)', 'Dew Point Temp (°C)', 'Precip. Amount (mm)', 'hour_sin', 'hour_cos', 'month_sin', 'month_cos']
 
@@ -173,7 +175,7 @@ if __name__ == "__main__":
     learning_rates = [0.001, 0.0005, 0.0001, 0.00005] 
     dropouts = [0.1]
 
-    print("--- STARTING N-HITS SWEEP (VAL-OPTIMIZED) ---", flush=True)
+    print("--- STARTING N-HITS SWEEP ---", flush=True)
     results = []
     best_v_global = float('inf')
     winning_residuals = None
@@ -205,7 +207,7 @@ if __name__ == "__main__":
     # ==========================================
     # FINAL EVALUATION (THE BLIND TEST SET)
     # ==========================================
-    print("\n--- PERFORMING FINAL BLIND TEST ---", flush=True)
+    print("\n--- PERFORMING FINAL TEST ---", flush=True)
     
     # Load winning model
     champ_model = RealNHITS(input_dim=11, seq_len=best_cfg['lb'], 
@@ -240,9 +242,9 @@ if __name__ == "__main__":
                      p_final[:400] + 1.96 * estimated_se, 
                      color='red', alpha=0.15, label="95% CI (Estimated)")
     
-    plt.title(f"Real N-HiTS Pure Test Set Showdown\nTest RMSE: {final_rmse:.2f} | Estimated SE: {estimated_se:.2f}")
+    plt.title(f"N-HiTS Test Set Evaluation\nTest RMSE: {final_rmse:.2f} | Estimated SE: {estimated_se:.2f}")
     plt.legend()
-    plt.savefig("final_pure_nhits_test.png")
+    plt.savefig("final_nhits_test.png")
     
     # Save the SE and residuals for later comparison
     np.save("Estimated_residuals.npy", winning_residuals)
