@@ -105,6 +105,7 @@ Handling complex interactions between meteorology and pollution levels
  
 # Evaluation Metrics
 Models are evaluated using:
-RMSE (Root Mean Squared Error) – primary performance metric
-MAE (Mean Absolute Error) – average absolute prediction error
+- RMSE (Root Mean Squared Error)
+- MAE (Mean Absolute Error)
+
 
