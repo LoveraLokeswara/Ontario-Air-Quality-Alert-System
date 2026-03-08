@@ -35,7 +35,7 @@ Ontario-Air-Quality-Alert-System/
 │
 ├── models/                            # Serialized trained models
 ├── results/                           # Forecast plots, RMSE tables, and evaluation metrics
-└── report/                            # Source files for the technical presentation/report
+└── presentation/                      # Source files for the technical presentation
 ```
 
 ## How to Run the Analysis
@@ -107,6 +107,7 @@ Handling complex interactions between meteorology and pollution levels
 Models are evaluated using:
 - RMSE (Root Mean Squared Error)
 - MAE (Mean Absolute Error)
+
 
 
 
