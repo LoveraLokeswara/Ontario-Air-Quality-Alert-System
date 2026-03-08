@@ -87,27 +87,28 @@ These variables influence pollutant dispersion and accumulation.
 Two forecasting approaches are implemented.
 
 1. LASSO Regression (Baseline)
-- A linear regression model with L1 regularization used as a strong interpretable baseline.
+* A linear regression model with L1 regularization used as a strong interpretable baseline.
 
-Key characteristics:
-- Handles multicollinearity
-- Performs automatic feature selection
-- Captures linear relationships between weather variables and PM₂.₅
+* Key characteristics:
+    * Handles multicollinearity
+    * Performs automatic feature selection
+    * Captures linear relationships between weather variables and PM₂.₅
 
 
 2. N-HiTS (Neural Hierarchical Interpolation for Time Series)
-- A deep learning architecture designed for long-horizon time-series forecasting.
+* A deep learning architecture designed for long-horizon time-series forecasting.
 
-Advantages include:
-- Capturing nonlinear temporal dynamics
-- Modelling multi-scale temporal patterns
-- Handling complex interactions between meteorology and pollution levels
+* Advantages include:
+    * Capturing nonlinear temporal dynamics
+    * Modelling multi-scale temporal patterns
+    * Handling complex interactions between meteorology and pollution levels
 
  
 # Evaluation Metrics
 Models are evaluated using:
-- RMSE (Root Mean Squared Error)
-- MAE (Mean Absolute Error)
+* RMSE (Root Mean Squared Error)
+* MAE (Mean Absolute Error)
+
 
 
 
