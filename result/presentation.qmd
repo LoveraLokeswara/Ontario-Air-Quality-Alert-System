@@ -76,7 +76,7 @@ Weather: hourly meteorology (temperature, humidity, wind speed, precipitation, a
 Alignment:
 
 -   Join by timestamp (date-hour) at a Toronto monitoring station
--   Hourly data from 2019/06/22 to 2025/12/31
+-   Hourly data from 2019/06/22 to 2025/12/31 **(total 56,362 rows)**
 
 Core steps:
 
