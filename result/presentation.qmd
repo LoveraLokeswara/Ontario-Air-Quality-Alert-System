@@ -400,7 +400,7 @@ $L=24$, hidden width $=512$, learning rate $=0.00005$
 
 - The RMSE and MAE of the N-hits model indicates moderate predictive accuracy, meaning that although the model cannot reliably predict the exact concentration it can still capture overall trends and rising pollution events.
 
-- The model’s 95% confidence interval provides a useful upper bound for predicted PM₂.₅, allowing TTC operators to anticipate when pollution may reach harmful levels (e.g., >50 µg/m³) and adjust HVAC systems proactively before spikes occur.
+- The model’s 95% confidence interval provides a useful upper bound for predicted $PM_{2.5}$ , allowing TTC operators to anticipate when pollution may reach harmful levels (e.g., >50 $\mu \text{g/m}^3$) and adjust HVAC systems proactively before spikes occur.
 
 - This forecasting system should be treated as an early-warning decision support tool, not a precise measurement system.
 
