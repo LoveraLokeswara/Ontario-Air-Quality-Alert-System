@@ -145,7 +145,7 @@ def run_trial(lb, lr, hd, drop, data, device, pm_mean, pm_std):
 
         if v_rmse < best_v_rmse:
             best_v_rmse = v_rmse
-            best_v_residuals = a_val - p_val # Harvest honest residuals
+            best_v_residuals = a_val - p_val # Harvest Estimated residuals
             torch.save(model.state_dict(), "temp_best.pt")
             counter = 0
         else:
@@ -198,9 +198,9 @@ if __name__ == "__main__":
     # Save search results
     pd.DataFrame(results).to_csv("nhits_sweep_pure_val.csv", index=False)
 
-    # Calculate Honest Standard Error from the winning validation residuals
+    # Calculate Estimated Standard Error from the winning validation residuals
     estimated_se = np.std(winning_residuals)
-    print(f"\nWINNER CHOSEN: {best_cfg} | Honest SE: {estimated_se:.4f}")
+    print(f"\nWINNER CHOSEN: {best_cfg} | Estimated SE: {estimated_se:.4f}")
 
     # ==========================================
     # FINAL EVALUATION (THE BLIND TEST SET)
@@ -229,22 +229,22 @@ if __name__ == "__main__":
     a_final = (np.concatenate(test_acts).flatten() * pm_std) + pm_mean
     
     final_rmse = np.sqrt(mean_squared_error(a_final, p_final))
-    print(f"FINAL TEST RMSE: {final_rmse:.4f} | Honest SE: {estimated_se:.4f}")
+    print(f"FINAL TEST RMSE: {final_rmse:.4f} | Estimated SE: {estimated_se:.4f}")
     
-    # Plot with Honest Error Bands
+    # Plot with Estimated Error Bands
     plt.figure(figsize=(15, 6))
     plt.plot(a_final[:400], label="Actual PM2.5", color='black', alpha=0.5)
     plt.plot(p_final[:400], label="N-HiTS Forecast", color='red')
     plt.fill_between(range(400), 
                      p_final[:400] - 1.96 * estimated_se, 
                      p_final[:400] + 1.96 * estimated_se, 
-                     color='red', alpha=0.15, label="95% CI (Honest)")
+                     color='red', alpha=0.15, label="95% CI (Estimated)")
     
-    plt.title(f"Real N-HiTS Pure Test Set Showdown\nTest RMSE: {final_rmse:.2f} | Honest SE: {estimated_se:.2f}")
+    plt.title(f"Real N-HiTS Pure Test Set Showdown\nTest RMSE: {final_rmse:.2f} | Estimated SE: {estimated_se:.2f}")
     plt.legend()
     plt.savefig("final_pure_nhits_test.png")
     
     # Save the SE and residuals for later comparison
-    np.save("honest_residuals.npy", winning_residuals)
-    with open("honest_se.txt", "w") as f:
+    np.save("Estimated_residuals.npy", winning_residuals)
+    with open("Estimated_se.txt", "w") as f:
         f.write(str(estimated_se))
