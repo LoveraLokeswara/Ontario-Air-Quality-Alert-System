@@ -398,11 +398,9 @@ $L=24$, hidden width $=512$, learning rate $=0.00005$
 
 ## Overall Forecasting Accuracy and Effectiveness 
 
-- Typical hourly PM$_{2.5}$ levels in Ontario often range from ~5–30 µg/m³, with occasional spikes above 50 µg/m³ during pollution events. An RMSE of ~6.7 µg/m³ therefore corresponds to an average prediction error of roughly 20–30% of typical concentration levels.
+- The RMSE and MAE of the N-hits model indicates moderate predictive accuracy, meaning that although the model cannot reliably predict the exact concentration it can still capture overall trends and rising pollution events.
 
-- This level of error is reasonable for short-term environmental forecasting, where pollution levels are highly variable and influenced by complex atmospheric processes.
+- The model’s 95% confidence interval provides a useful upper bound for predicted PM₂.₅, allowing TTC operators to anticipate when pollution may reach harmful levels (e.g., >50 µg/m³) and adjust HVAC systems proactively before spikes occur.
 
 - This forecasting system should be treated as an early-warning decision support tool, not a precise measurement system.
-
-- Its value lies in anticipating pollution spikes early enough for operational adjustments, rather than predicting exact PM$_{2.5}$ concentrations. 
 
