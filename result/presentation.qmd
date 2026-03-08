@@ -42,7 +42,7 @@ Operational context:
 -   During outdoor $PM_{2.5}$ spikes, filters degrade faster and indoor air quality risk increases
 -   Forecasts enable proactive station ventilation actions (pre-ventilate, reduce intake during spikes, recirculation)
 
-------------------------------------------------------------------------
+---
 
 ## Research questions
 
@@ -50,61 +50,33 @@ Primary:
 
 How accurately can hourly $PM_{2.5}$ in Ontario be forecasted at short horizon ($h = 4$ hours) using meteorological and environmental data?
 
-Secondary:
+## Case Study 1 vs Case Study 2
 
-How much historical context is needed for optimal performance (for example 6, 12, 24, 48 hours of past observations)?
-
-------------------------------------------------------------------------
-
-## Talk workflow
-
-1.  Case Study 1 limitations and the pivot
-2.  Data processing and aggregation for hourly forecasting
-3.  Simple baselines: linear regression, Lasso
-4.  Tuning baselines: cross-validation
-5.  Complex model: N-HiTS
-6.  Tuning N-HiTS: grid search
-7.  Comparison: RMSE and error behavior
-8.  Model inference and operational interpretation
-9.  Closing and next steps
-
-# Addressing Case Study 1 limitations
-
-## What Case Study 1 could not do
-
-Limitations identified:
+Limitations identified in case study 1:
 
 -   Traffic data only available daily, forcing hourly $PM_{2.5}$ to be averaged into daily values, losing spike timing
 -   Traffic impact was weak. Weather and seasonality were the true drivers
 
-------------------------------------------------------------------------
-
-## Case Study 2 objective and pivot
-
-Key changes:
+Key changes in case study 2:
 
 -   Remove unhelpful traffic signal, focus entirely on weather drivers
 -   Improve data resolution by using hourly weather and historical $PM_{2.5}$ to predict future hourly $PM_{2.5}$ 
 -   Focus on prediction rather than interpretability 
--   Focus on the closest air quality and meteorological stations
+-   Focus on the closest air quality and meteorological station
 
 
 # Data and preprocessing
 
-## Data sources and alignment plan
+## Data Sources and Cleaning
 
 Air quality: hourly pollutant $PM_{2.5}$ concentrations in downtown Toronto
 
-Weather: hourly meteorology (temperature, humidity, wind speed, precipitation, air pressure) in downtown Toronto
+Weather: hourly meteorology (temperature, humidity, wind speed, precipitation, air pressure, dew point temperature) in downtown Toronto
 
 Alignment:
 
 -   Join by timestamp (date-hour) at a Toronto monitoring station
--   We had hourly data from 2019/06/22 to 2025/12/31
-
-------------------------------------------------------------------------
-
-## Data Cleaning 
+-   Hourly data from 2019/06/22 to 2025/12/31
 
 Core steps:
 
@@ -120,19 +92,19 @@ Core steps:
 
 ## 1. Establishing the Baseline
 
-**The Challenge:** Predicting PM2.5 requires feeding the model a historical window of multiple weather variables (temp, wind, humidity). This creates a highly dimensional, collinear feature space.
+**The Forecasting Objective:** Predict the **+4h future PM2.5 concentration** utilizing a rolling **24-hour historical lookback window**.
+
+**The Challenge:** Feeding 24 hours of multiple weather variables (temp, wind, humidity, etc.) into a linear model creates a highly dimensional, collinear feature space.
 
 **The Solution: Lasso ($L_1$ Regularization)**
 
 $$
-\hat{\beta} = \arg\min_{\beta} \underbrace{\sum_t (\text{PM2.5}_{t+h} - \beta_0 - \beta^\top X_t)^2}_{\text{1. Minimize Error}} + \underbrace{\lambda \lVert \beta \rVert_1}_{\text{2. Penalty Term}}
+\hat{\beta} = \arg\min_{\beta} \underbrace{\sum_t (\text{PM2.5}_{t+4} - \beta_0 - \beta^\top X_{t-23:t})^2}_{\text{1. Minimize Error}} + \underbrace{\lambda \lVert \beta \rVert_1}_{\text{2. Penalty Term}}
 $$
 
 **Why it fits our data:**
 
 - **Feature Selection:** The penalty shrinks the weights of irrelevant lags and weather noise to *exactly zero*.
-
-- **Interpretability:** Leaves us with a sparse, understandable baseline of what truly drives PM2.5.
 
 ---
 
@@ -140,17 +112,19 @@ $$
 
 **1. Data Transformation**
 
-- **Flattening:** Reshaped 2D historical weather windows into 1D vectors for Lasso.
+- **Flattening:** Reshaped the 24h 2D historical weather windows into 1D vectors.
 
-- **Scaling:** Standardized ($Z$-scores) all inputs to ensure unbiased penalty application across varying physical units.
+- **Scaling:** Standardized ($Z$-scores) to ensure unbiased penalty application across varying physical units.
 
-**2. Time-Series Cross Validation**
+**2. Strict Chronological Split & Time-Series CV**
 
-- **Expanding Window (5 Folds):** Standard cross-validation randomly shuffles data, causing future data to leak into the past. We used `TimeSeriesSplit` to strictly train on a growing historical window and validate on the immediate rolling future, keeping the final test set completely isolated.
+- **The Split:** Time-series data is never randomly shuffled. We allocated the **first 85% of data for Training & CV**, keeping the **final 15% completely isolated for Testing**.
+
+- **Expanding Window (5 Folds):** Standard cross-validation leaks future data into the past. We used `TimeSeriesSplit` on the 85% block to both train on a growing history and validate on the immediate rolling future.
 
 **3. Hyperparameter Fine-Tuning**
 
-- **Automated Alpha Sweep:** Utilized `LassoCV` to dynamically sweep for the optimal penalty strength ($\alpha \equiv \lambda$) across our 5 chronological folds.
+- **Alpha Tuning:** Utilized `LassoCV` (`max_iter=10000`) to dynamically sweep for the optimal penalty strength ($\alpha \equiv \lambda$) across our 5 chronological folds.
 
 ---
 
@@ -158,12 +132,12 @@ $$
 
 **What Lasso Did Well:**
 
-- Filtered out noise and provided a solid, interpretable RMSE benchmark.
+- Filtered out noise and provided a solid RMSE benchmark.
 
 
 **The Limitation:**
 
-- Lasso is fundamentally a **linear** model. 
+- Lasso is fundamentally a **linear** model constrained by the 24h window's dilution effect.
 
 - It struggles to capture **non-linear, dynamic shocks**.
 
@@ -171,6 +145,7 @@ $$
 **The Solution: N-HiTS**
 
 - We need a complex architecture capable of separating slow atmospheric trends from sudden weather shocks.
+
 
 
 
@@ -209,7 +184,7 @@ $$
 \hat{y}_{t+4} = \left[\hat{y}_{t+1:t+24}\right]_4
 $$
 
-- lookback: $L \in \{24, 48\}$
+- lookback: $L = \{24\}$
 - horizon head: 24-step output, but we report the 4-hour-ahead value
 :::
 
@@ -277,7 +252,7 @@ Pipeline inside each block:
 2. **MLP encoder**  
    A small neural network learns a hidden representation of the time window.
 
-3. **Backcast (signal explanation)**  
+3. **Backcast**  
    The block reconstructs the part of the input signal it can explain.
 
 :::
@@ -378,7 +353,6 @@ Metrics:
 Compute:
 
 - GPU (Waterloo Remote Server), batch size 128
-- runtime per config ~ 30 mins
 
 
 ---
@@ -390,7 +364,6 @@ We run a small hyperparameter sweep centered on best-performing configs:
 - lookback $L \in \{24, 48\}$
 - hidden width $\in \{128, 256, 512\}$
 - learning rate $\in \{0.001, 0.0005, 0.0001, 0.00005\}$
-- dropout $\in \{0.1\}$
 
 
 Selection rule:
@@ -399,7 +372,7 @@ Selection rule:
 - trainable parameters: 1,453,890 parameters
 
 \begin{alertblock}{Chosen config}
-$L=24$, hidden width $=256$, learning rate $=0.0001$, dropout $=0.1$
+$L=24$, hidden width $=512$, learning rate $=0.00005$
 \end{alertblock}
 
 
@@ -413,16 +386,15 @@ $L=24$, hidden width $=256$, learning rate $=0.0001$, dropout $=0.1$
 
 ## Model Performance - RMSE Comparison
 
-| Model  | RMSE   |
-|--------|--------|
-| LASSO  | 6.7843 |
-| N-HiTS | 6.7347 |
+| Model  | RMSE   | MAE    |
+|--------|--------|--------|
+| LASSO  | 6.7789 | 4.1672 |
+| N-HiTS | 6.8246 | 4.1761 |
 
 : Model RMSE Comparison {#tbl-model-rmse}
 
-- The LASSO and N-HiTS models produce very similar RMSE values, indicating that much of the predictive signal is captured by linear relationships and recent pollution history.
-
-- The small improvement from N-HiTS suggests that nonlinear temporal structure exists but contributes only marginal additional predictive power for a 4-hour forecast horizon.
+- The LASSO and N-HiTS models produce very similar RMSE and MAE values.
+- The N-HiTS model's ability to capture non-linearities and multi-scale patterns does not translate into a significant improvement in forecasting accuracy for this dataset, suggesting that the underlying dynamics may be relatively simple.
 
 ## Overall Forecasting Accuracy and Effectiveness 
 
@@ -434,9 +406,3 @@ $L=24$, hidden width $=256$, learning rate $=0.0001$, dropout $=0.1$
 
 - Its value lies in anticipating pollution spikes early enough for operational adjustments, rather than predicting exact PM$_{2.5}$ concentrations. 
 
-
-## Appendix: additional figures
-
-Include:
-
-TBD 
