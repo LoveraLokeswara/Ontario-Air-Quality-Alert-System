@@ -67,10 +67,10 @@ class NHITSBlock(nn.Module):
 class RealNHITS(nn.Module):
     def __init__(self, input_dim, seq_len, hidden_dim=256, dropout_rate=0.1):
         super().__init__()
-        self.max_horizon = 48 
-        self.block1 = NHITSBlock(input_dim, seq_len, self.max_horizon, 4, 12, hidden_dim, dropout_rate)
-        self.block2 = NHITSBlock(input_dim, seq_len, self.max_horizon, 2, 24, hidden_dim, dropout_rate)
-        self.block3 = NHITSBlock(input_dim, seq_len, self.max_horizon, 1, 48, hidden_dim, dropout_rate)
+        self.max_horizon = 24
+        self.block1 = NHITSBlock(input_dim, seq_len, self.max_horizon, 4, 6, hidden_dim, dropout_rate)
+        self.block2 = NHITSBlock(input_dim, seq_len, self.max_horizon, 2, 12, hidden_dim, dropout_rate)
+        self.block3 = NHITSBlock(input_dim, seq_len, self.max_horizon, 1, 24, hidden_dim, dropout_rate)
 
     def forward(self, x):
         exog = x[:, :, 1:] 
