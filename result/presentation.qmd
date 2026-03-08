@@ -48,7 +48,7 @@ Operational context:
 
 Primary:
 
-How accurately can hourly $PM_{2.5}$ in Ontario be forecasted at short horizon ($h = 4$ hours) using meteorological and environmental data?
+How accurately can hourly $PM_{2.5}$ in Ontario be forecasted at a short horizon ($h = 4$ hours) using meteorological data?
 
 ## Case Study 1 vs Case Study 2
 
@@ -404,3 +404,10 @@ $L=24$, hidden width $=512$, learning rate $=0.00005$
 
 - This forecasting system should be treated as an early-warning decision support tool, not a precise measurement system.
 
+## 
+
+\vspace{1.5cm}
+
+\begin{center}
+\Huge \textbf{Thank You!}
+\end{center}
