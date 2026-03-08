@@ -26,6 +26,9 @@ jobs:
       - name: Setup Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
+      - name: Install TinyTeX
+        uses: r-lib/actions/setup-tinytex@v2
+        
       - name: Render presentation
         run: |
           quarto render result/presentation.qmd
