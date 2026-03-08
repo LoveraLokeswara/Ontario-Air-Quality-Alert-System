@@ -44,14 +44,37 @@ def prep_and_merge(aq_filepath, weather_filepath):
     merged_df = pd.merge(aq_clean, weather_df, on='Datetime', how='inner')
     merged_df = merged_df.sort_values('Datetime').reset_index(drop=True)
     
-    # Interpolate PM2.5 for short gaps
-    merged_df['PM_ppb'] = merged_df['PM_ppb'].ffill()
+    # --- EDITED SECTION: PM2.5 Forward Fill (up to 3 hours), Drop, and Print ---
+    initial_rows = len(merged_df)
+    
+    # Forward fill PM2.5 for gaps up to 3 hours, then drop the remaining empty rows
+    merged_df['PM_ppb'] = merged_df['PM_ppb'].ffill(limit=4)
+    merged_df = merged_df.dropna(subset=['PM_ppb'])
+    
+    # --- NEW: Cyclical Time Features ---
+    # This gives the models a "clock" to understand diurnal patterns, preventing 24h flatlining
+    merged_df['hour'] = merged_df['Datetime'].dt.hour
+    merged_df['month'] = merged_df['Datetime'].dt.month
+
+    merged_df['hour_sin'] = np.sin(2 * np.pi * merged_df['hour'] / 24.0)
+    merged_df['hour_cos'] = np.cos(2 * np.pi * merged_df['hour'] / 24.0)
+    merged_df['month_sin'] = np.sin(2 * np.pi * merged_df['month'] / 12.0)
+    merged_df['month_cos'] = np.cos(2 * np.pi * merged_df['month'] / 12.0)
+    
+    # Calculate and print the dropped rows
+    dropped_rows = initial_rows - len(merged_df)
+    print(f"\n--- GAP FILTERING DIAGNOSTICS ---")
+    print(f"Total merged rows before dropping: {initial_rows}")
+    print(f"Rows dropped due to missing PM2.5 (>4h gap): {dropped_rows} ({(dropped_rows/initial_rows)*100:.2f}%)")
+    print(f"Remaining clean rows: {len(merged_df)}")
+    print(f"---------------------------------\n")
+    # ---------------------------------------------------------------------------
 
     # Forward fill weather conditions (categorical)
     merged_df['Weather'] = merged_df['Weather'].ffill()
 
     # Forward fill remaining weather numerical columns
-    numerical_weather_cols = ['Temp (°C)', 'Rel Hum (%)', 'Wind Spd (km/h)', 'Stn Press (kPa)']
+    numerical_weather_cols = ['Temp (°C)', 'Rel Hum (%)', 'Wind Spd (km/h)', 'Stn Press (kPa)', 'Dew Point Temp (°C)', 'Precip. Amount (mm)']
     merged_df[numerical_weather_cols] = merged_df[numerical_weather_cols].ffill()
     
     print(f"Successfully merged! Output contains {len(merged_df)} rows.")
@@ -59,7 +82,7 @@ def prep_and_merge(aq_filepath, weather_filepath):
 
 # Specify data paths 
 aq_file = "data/air_quality/aq_data/station_31129_data.csv"
-weather_file = "data/weather_data/Toronto_City_Centre_Downtown_hourly_2022_2025.csv" 
+weather_file = "data/weather_data/Toronto_City_Centre_Downtown_hourly_2018_2025.csv" 
 
 final_merged_data = prep_and_merge(aq_file, weather_file)
 
