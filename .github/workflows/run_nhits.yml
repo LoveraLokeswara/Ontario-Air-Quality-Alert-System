@@ -1,0 +1,37 @@
+name: Run NHITS Model and Render Presentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  run-model:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Run NHITS model sweep
+        run: |
+          uv run python hits.py
+
+      - name: Setup Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Render presentation
+        run: |
+          quarto render results/presentation.qmd
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-presentation
+          path: results/
