@@ -76,9 +76,10 @@ Variables include:
 Hourly weather measurements used as predictors, including:
 * Temperature
 * Wind speed
-* Wind gusts
+* Precipitation
 * Humidity
-* Atmospheric pressure
+* Air pressure
+* Dew point temperature
 These variables influence pollutant dispersion and accumulation.
 
 ---
@@ -98,15 +99,16 @@ Key characteristics:
 - A deep learning architecture designed for long-horizon time-series forecasting.
 
 Advantages include:
-Capturing nonlinear temporal dynamics
-Modeling multi-scale temporal patterns
-Handling complex interactions between meteorology and pollution levels
+- Capturing nonlinear temporal dynamics
+- Modelling multi-scale temporal patterns
+- Handling complex interactions between meteorology and pollution levels
 
  
 # Evaluation Metrics
 Models are evaluated using:
 - RMSE (Root Mean Squared Error)
 - MAE (Mean Absolute Error)
+
 
 
 
