@@ -44,14 +44,14 @@ def prep_and_merge(aq_filepath, weather_filepath):
     merged_df = pd.merge(aq_clean, weather_df, on='Datetime', how='inner')
     merged_df = merged_df.sort_values('Datetime').reset_index(drop=True)
     
-    # --- EDITED SECTION: PM2.5 Forward Fill (up to 3 hours), Drop, and Print ---
+    # --- PM2.5 Forward Fill (up to 2 hours), Drop, and Print ---
     initial_rows = len(merged_df)
     
-    # Forward fill PM2.5 for gaps up to 3 hours, then drop the remaining empty rows
-    merged_df['PM_ppb'] = merged_df['PM_ppb'].ffill(limit=4)
+    # Forward fill PM2.5 for gaps up to 2 hours, then drop the remaining empty rows
+    merged_df['PM_ppb'] = merged_df['PM_ppb'].ffill(limit=2)
     merged_df = merged_df.dropna(subset=['PM_ppb'])
     
-    # --- NEW: Cyclical Time Features ---
+    # --- Cyclical Time Features ---
     # This gives the models a "clock" to understand diurnal patterns, preventing 24h flatlining
     merged_df['hour'] = merged_df['Datetime'].dt.hour
     merged_df['month'] = merged_df['Datetime'].dt.month
