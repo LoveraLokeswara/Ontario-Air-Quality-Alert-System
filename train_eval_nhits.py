@@ -96,7 +96,7 @@ if __name__ == "__main__":
     pm_mean, pm_std = scaler.mean_[0], scaler.scale_[0]
 
     # --- THE CLEAN SWEEP ---
-    lookbacks = [24, 48]
+    lookbacks = [24, 48, 72, 96]
     hidden_dims = [128, 256, 512]
     learning_rates = [0.001, 0.0005, 0.0001, 0.00005] 
     dropouts = [0.1]
