@@ -21,7 +21,7 @@ jobs:
 
       - name: Run NHITS model sweep
         run: |
-          uv run python nhits.py
+          uv run python train_eval_nhits.py
 
       - name: Setup Quarto
         uses: quarto-dev/quarto-actions/setup@v2
