@@ -42,8 +42,36 @@ Ontario-Air-Quality-Alert-System/
 │   └── presentation.html              # Rendered technical presentation
 │
 ├── train_eval_nhits.py                # Main pipeline for N-HiTS training and hyperparameter sweep
-└── model_comparison.ipynb             # Notebook for comparing different modeling approaches
+└── model_comparison.ipynb             # Interactive notebook for comparing LASSO vs. N-HiTS performance
 ```
+
+---
+
+## Model Comparison & Evaluation (`model_comparison.ipynb`)
+
+The `model_comparison.ipynb` notebook provides a comprehensive evaluation of the forecasting models. It serves as the primary tool for comparing the deep learning approach against traditional statistical baselines.
+
+### Key Features of the Comparison:
+1. **LASSO Baseline Training**:
+   - Implements a **LASSO (Least Absolute Shrinkage and Selection Operator)** regression model using `scikit-learn`.
+   - Uses `LassoCV` with `TimeSeriesSplit` (5-fold) to automatically tune the regularization strength.
+   - The model is trained on flattened lookback windows of all 11 features to capture linear relationships.
+
+2. **N-HiTS Inference**:
+   - Loads the pre-trained "global champion" N-HiTS model (`model/global_champion_nhits.pt`).
+   - Performs inference on the same test set used for the LASSO baseline to ensure a fair comparison.
+
+3. **Performance Metrics**:
+   - Calculates **RMSE** (Root Mean Squared Error) and **MAE** (Mean Absolute Error) for both models.
+   - Provides a direct comparison of how much the non-linear deep learning model improves upon the linear baseline.
+
+4. **Uncertainty Estimation**:
+   - Calculates validation residuals to estimate a **95% Confidence Interval** (Margin of Error) for the N-HiTS predictions.
+   - This provides operational context for the reliability of the forecasts.
+
+5. **Visualization**:
+   - Generates high-resolution plots comparing **Actual vs. LASSO vs. N-HiTS** forecasts over a 300-hour window.
+   - Includes the 95% CI band to visualize prediction uncertainty.
 
 ---
 
