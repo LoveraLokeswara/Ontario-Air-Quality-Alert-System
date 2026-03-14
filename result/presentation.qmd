@@ -76,14 +76,14 @@ Weather: hourly meteorology (temperature, humidity, wind speed, precipitation, a
 Alignment:
 
 -   Join by timestamp (date-hour) at a Toronto monitoring station
--   Hourly data from 2019/06/22 to 2025/12/31 **(total 56,362 rows)**
+-   Hourly data from 2019/06/22 to 2025/12/31 **(total 56,306 rows)**
 
 Core steps:
 
 -   Merge: hourly weather with hourly $PM_{2.5}$ by timestamp
 -   Missingness handling:
     -  ~ 1% of $PM_{2.5}$ data was missing 
-    -  $PM_{2.5}$ missingness was forward filled up to 4 hours, else the remaining rows were dropped
+    -  $PM_{2.5}$ missingness was forward filled up to 2 hours, else the remaining rows were dropped
     - Weather variables all had < 1% missingness -- missing variables were forward filled
 -   Feature construction:
     -   Cyclical time features for hour and month 
