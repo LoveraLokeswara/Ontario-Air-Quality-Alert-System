@@ -8,7 +8,7 @@ The goal is to support operational decision-making for the Toronto Transit Commi
 
 This analysis investigates how accurately short-term PM₂.₅ concentrations can be predicted by:
 - Training a deep learning time-series model (**N-HiTS**) to capture nonlinear temporal dynamics.
-- Comparing predictive performance against a baseline (LASSO) to determine whether more complex models provide meaningful improvements.
+- Comparing predictive performance against a baseline (**LASSO**) to determine whether more complex models provide meaningful improvements.
 - The forecasting task focuses on short-term horizons (specifically the **4th-hour prediction**) using recent historical observations.
 
 ---
@@ -53,12 +53,12 @@ The `model_comparison.ipynb` notebook provides a comprehensive evaluation of the
 
 ### Key Features of the Comparison:
 1. **LASSO Baseline Training**:
-   - Implements a **LASSO (Least Absolute Shrinkage and Selection Operator)** regression model using `scikit-learn`.
+   - Implements a **LASSO** regression model using `scikit-learn`.
    - Uses `LassoCV` with `TimeSeriesSplit` (5-fold) to automatically tune the regularization strength.
    - The model is trained on flattened lookback windows of all 11 features to capture linear relationships.
 
 2. **N-HiTS Inference**:
-   - Loads the pre-trained "global champion" N-HiTS model (`model/global_champion_nhits.pt`).
+   - Loads the pre-trained "global champion" **N-HiTS** model (`model/global_champion_nhits.pt`).
    - Performs inference on the same test set used for the LASSO baseline to ensure a fair comparison.
 
 3. **Performance Metrics**:
