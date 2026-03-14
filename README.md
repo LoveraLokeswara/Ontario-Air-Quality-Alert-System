@@ -1,4 +1,4 @@
-# PM₂.₅ Short-Term Forecasting for TTC Air Quality Management 
+# PM₂.₅ Short-Term Forecasting for TTC Air Quality Management
 
 This repository contains the code and data used to forecast short-term PM₂.₅ (fine particulate matter) concentrations in Ontario using meteorological and environmental data. The project evaluates whether modern deep learning time-series models improve forecasting accuracy relative to simpler statistical baselines.
 
@@ -8,7 +8,7 @@ The goal is to support operational decision-making for the Toronto Transit Commi
 
 This analysis investigates how accurately short-term PM₂.₅ concentrations can be predicted by:
 - Training a deep learning time-series model (**N-HiTS**) to capture nonlinear temporal dynamics.
-- Comparing predictive performance against a baseline (**LASSO**) to determine whether more complex models provide meaningful improvements.
+- Comparing predictive performance against a baseline (LASSO) to determine whether more complex models provide meaningful improvements.
 - The forecasting task focuses on short-term horizons (specifically the **4th-hour prediction**) using recent historical observations.
 
 ---
@@ -53,12 +53,12 @@ The `model_comparison.ipynb` notebook provides a comprehensive evaluation of the
 
 ### Key Features of the Comparison:
 1. **LASSO Baseline Training**:
-   - Implements a **LASSO** regression model using `scikit-learn`.
+   - Implements a **LASSO (Least Absolute Shrinkage and Selection Operator)** regression model using `scikit-learn`.
    - Uses `LassoCV` with `TimeSeriesSplit` (5-fold) to automatically tune the regularization strength.
    - The model is trained on flattened lookback windows of all 11 features to capture linear relationships.
 
 2. **N-HiTS Inference**:
-   - Loads the pre-trained "global champion" **N-HiTS** model (`model/global_champion_nhits.pt`).
+   - Loads the pre-trained "global champion" N-HiTS model (`model/global_champion_nhits.pt`).
    - Performs inference on the same test set used for the LASSO baseline to ensure a fair comparison.
 
 3. **Performance Metrics**:
@@ -112,57 +112,32 @@ To execute the N-HiTS training pipeline, including hyperparameter sweep and fina
 ```bash
 uv run python train_eval_nhits.py
 ```
-## Datasets Overview
-
-The project integrates two main datasets:
-
-**Air Quality Data**
-Hourly PM₂.₅ concentrations collected from Ontario environmental monitoring stations.
-Variables include:
-* Timestamp
-* PM₂.₅ concentration (µg/m³)
-* Station identifier
-  
-**Meteorological Data**
-Hourly weather measurements used as predictors, including:
-* Temperature
-* Wind speed
-* Precipitation
-* Humidity
-* Air pressure
-* Dew point temperature
-These variables influence pollutant dispersion and accumulation.
+This will:
+- Perform a grid search over lookback windows, hidden dimensions, and learning rates.
+- Save the best model as `global_champion_nhits.pt`.
+- Generate evaluation plots (e.g., `final_nhits_test.png`).
 
 ---
 
-1. LASSO Regression (Baseline)
-* A linear regression model with L1 regularization used as a strong interpretable baseline.
+## Datasets & Features
 
-* Key characteristics:
-    * Handles multicollinearity
-    * Performs automatic feature selection
-    * Captures linear relationships between weather variables and PM₂.₅
+### Air Quality Data
+Hourly PM₂.₅ concentrations collected from Ontario environmental monitoring stations (e.g., Toronto Downtown).
+- **Target:** `PM_ppb` (PM₂.₅ concentration).
 
 ### Meteorological Data
 Hourly weather measurements from Environment Canada (Toronto City Centre):
 - Temperature, Relative Humidity, Wind Speed, Station Pressure, Dew Point, and Precipitation.
 
-2. N-HiTS (Neural Hierarchical Interpolation for Time Series)
-* A deep learning architecture designed for long-horizon time-series forecasting.
+### Feature Engineering
+- **Cyclical Time Features:** `hour_sin`, `hour_cos`, `month_sin`, `month_cos` to capture diurnal and seasonal patterns.
+- **Lagged Observations:** Handled via the sliding window in `AQDataset`.
 
-* Advantages include:
-    * Capturing nonlinear temporal dynamics
-    * Modelling multi-scale temporal patterns
-    * Handling complex interactions between meteorology and pollution levels
+---
 
- 
-# Evaluation Metrics
-Models are evaluated using:
-* RMSE (Root Mean Squared Error)
-* MAE (Mean Absolute Error)
+## Modeling Approach: N-HiTS
 
-
-
+The project implements the **Neural Hierarchical Interpolation for Time Series (N-HiTS)** architecture, which is designed to capture multi-scale temporal patterns.
 
 ### Key Features:
 - **Hierarchical Pooling:** Uses multiple blocks with different pooling rates to capture both long-term trends and short-term shocks.
