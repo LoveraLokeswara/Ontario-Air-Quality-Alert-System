@@ -1,4 +1,4 @@
-# PM₂.₅ Short-Term Forecasting for TTC Air Quality Management
+# PM₂.₅ Short-Term Forecasting for TTC Air Quality Management 
 
 This repository contains the code and data used to forecast short-term PM₂.₅ (fine particulate matter) concentrations in Ontario using meteorological and environmental data. The project evaluates whether modern deep learning time-series models improve forecasting accuracy relative to simpler statistical baselines.
 
@@ -112,32 +112,57 @@ To execute the N-HiTS training pipeline, including hyperparameter sweep and fina
 ```bash
 uv run python train_eval_nhits.py
 ```
-This will:
-- Perform a grid search over lookback windows, hidden dimensions, and learning rates.
-- Save the best model as `global_champion_nhits.pt`.
-- Generate evaluation plots (e.g., `final_nhits_test.png`).
+## Datasets Overview
+
+The project integrates two main datasets:
+
+**Air Quality Data**
+Hourly PM₂.₅ concentrations collected from Ontario environmental monitoring stations.
+Variables include:
+* Timestamp
+* PM₂.₅ concentration (µg/m³)
+* Station identifier
+  
+**Meteorological Data**
+Hourly weather measurements used as predictors, including:
+* Temperature
+* Wind speed
+* Precipitation
+* Humidity
+* Air pressure
+* Dew point temperature
+These variables influence pollutant dispersion and accumulation.
 
 ---
 
-## Datasets & Features
+1. LASSO Regression (Baseline)
+* A linear regression model with L1 regularization used as a strong interpretable baseline.
 
-### Air Quality Data
-Hourly PM₂.₅ concentrations collected from Ontario environmental monitoring stations (e.g., Toronto Downtown).
-- **Target:** `PM_ppb` (PM₂.₅ concentration).
+* Key characteristics:
+    * Handles multicollinearity
+    * Performs automatic feature selection
+    * Captures linear relationships between weather variables and PM₂.₅
 
 ### Meteorological Data
 Hourly weather measurements from Environment Canada (Toronto City Centre):
 - Temperature, Relative Humidity, Wind Speed, Station Pressure, Dew Point, and Precipitation.
 
-### Feature Engineering
-- **Cyclical Time Features:** `hour_sin`, `hour_cos`, `month_sin`, `month_cos` to capture diurnal and seasonal patterns.
-- **Lagged Observations:** Handled via the sliding window in `AQDataset`.
+2. N-HiTS (Neural Hierarchical Interpolation for Time Series)
+* A deep learning architecture designed for long-horizon time-series forecasting.
 
----
+* Advantages include:
+    * Capturing nonlinear temporal dynamics
+    * Modelling multi-scale temporal patterns
+    * Handling complex interactions between meteorology and pollution levels
 
-## Modeling Approach: N-HiTS
+ 
+# Evaluation Metrics
+Models are evaluated using:
+* RMSE (Root Mean Squared Error)
+* MAE (Mean Absolute Error)
 
-The project implements the **Neural Hierarchical Interpolation for Time Series (N-HiTS)** architecture, which is designed to capture multi-scale temporal patterns.
+
+
 
 ### Key Features:
 - **Hierarchical Pooling:** Uses multiple blocks with different pooling rates to capture both long-term trends and short-term shocks.
